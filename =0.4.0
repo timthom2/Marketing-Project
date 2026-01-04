@@ -1,0 +1,6 @@
+Defaulting to user installation because normal site-packages is not writeable
+Collecting lxml-html-clean
+  Using cached lxml_html_clean-0.4.3-py3-none-any.whl (14 kB)
+Requirement already satisfied: lxml in /Users/timthomas/Library/Python/3.9/lib/python/site-packages (from lxml-html-clean) (4.9.3)
+Installing collected packages: lxml-html-clean
+Successfully installed lxml-html-clean-0.4.3

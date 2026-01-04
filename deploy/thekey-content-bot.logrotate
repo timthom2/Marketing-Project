@@ -1,0 +1,9 @@
+/home/thekey/thekey-content-bot/logs/*.log {
+    daily
+    rotate 90
+    compress
+    delaycompress
+    missingok
+    notifempty
+    create 0644 thekey thekey
+}

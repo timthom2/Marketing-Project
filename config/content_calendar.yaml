@@ -1,0 +1,532 @@
+version: "3.0"
+start_date: "2026-01-06"
+
+# 12-week rotation with enriched local hooks, must-includes, and theme-specific content
+rotation_schedule:
+  week_1:
+    theme: new_year_care_planning
+    description: "New Year, New Care Plan - Annual care reviews, goal setting, and planning for aging in place"
+    seasonal_context: "Early January - New Year planning"
+    target_dates: "Jan 1-7"
+    
+    local_hook_types:
+      - "Provincial funding announcements for home care"
+      - "Health authority care coordination updates"
+      - "New Year senior wellness programs"
+    
+    local_angle_examples:
+      QC: "Quebec's CLSC home care assessment wait times and how to prepare"
+      ON: "Ontario's Home Care Modernization updates for 2026"
+      BC: "BC Home and Community Care eligibility changes"
+      MB: "Manitoba Home Care Program new year intake process"
+      AB: "Alberta Continuing Care connection services"
+    
+    must_include:
+      - "Cite a provincial home care program by name"
+      - "Include statistic on seniors preferring to age at home (with source)"
+      - "Reference local health authority assessment process"
+    
+    cta_focus: "getting-started"
+    cta_intent: "care assessment"
+    
+    theme_keywords:
+      long_tail:
+        - "annual senior care plan review {city}"
+        - "home care assessment {province} 2026"
+        - "aging in place planning {city}"
+        - "senior care goals new year"
+        - "{health_authority} home care eligibility"
+        - "family care planning meeting guide"
+    
+    research_checklist:
+      - "Find current provincial home care wait time data"
+      - "Identify recent health authority announcements"
+      - "Locate new year senior wellness programs in market"
+      - "Find current care plan review best practices"
+
+  week_2:
+    theme: winter_safety
+    description: "Winter Safety for Seniors - Falls prevention, hypothermia, heating safety"
+    seasonal_context: "Mid-January - Deep winter, extreme cold"
+    target_dates: "Jan 8-14"
+    
+    local_hook_types:
+      - "Provincial cold weather health advisories"
+      - "Municipal winter safety programs for seniors"
+      - "Health authority fall prevention initiatives"
+    
+    local_angle_examples:
+      QC: "Quebec's Info-Santé 811 winter health guidance"
+      ON: "Ontario Telehealth cold weather advisories"
+      BC: "BC CDC winter safety recommendations for seniors"
+      MB: "Manitoba Hydro heating assistance for seniors"
+      AB: "Alberta Health Services cold weather alerts"
+    
+    must_include:
+      - "Cite fall statistics for seniors in winter (with source)"
+      - "Reference provincial heating assistance program"
+      - "Include hypothermia prevention checklist"
+    
+    cta_focus: "hospital-to-home"
+    cta_intent: "fall recovery support"
+    
+    theme_keywords:
+      long_tail:
+        - "senior fall prevention {city} winter"
+        - "hypothermia signs elderly {province}"
+        - "heating assistance seniors {city}"
+        - "winter home safety checklist seniors"
+        - "{health_authority} fall prevention program"
+        - "ice and snow safety tips elderly"
+    
+    research_checklist:
+      - "Find current winter fall injury statistics for province"
+      - "Locate provincial heating assistance programs"
+      - "Identify health authority winter safety resources"
+      - "Find municipal snow clearing accessibility info"
+
+  week_3:
+    theme: winter_isolation
+    description: "Combating Winter Isolation - Social connection, mental health, companionship"
+    seasonal_context: "Late January - Long dark winter, isolation peaks"
+    target_dates: "Jan 15-21"
+    
+    local_hook_types:
+      - "Senior social programs and community centres"
+      - "Mental health resources for isolated seniors"
+      - "Volunteer visitor programs in region"
+    
+    local_angle_examples:
+      QC: "Quebec seniors' community centres (Centres communautaires) programs"
+      ON: "Ontario Seniors Community Grant Program activities"
+      BC: "BC Better at Home program social supports"
+      MB: "Age-Friendly Manitoba community connection initiatives"
+      AB: "Alberta Seniors and Housing community programs"
+    
+    must_include:
+      - "Cite loneliness/isolation statistics for Canadian seniors (with source)"
+      - "Reference local community centre or social program"
+      - "Include companionship care benefits"
+    
+    cta_focus: "companion-care"
+    cta_intent: "companionship and social support"
+    
+    theme_keywords:
+      long_tail:
+        - "senior loneliness {city} winter"
+        - "companion care services {city}"
+        - "elderly social isolation {province}"
+        - "senior community programs {city}"
+        - "volunteer visitor programs elderly {city}"
+        - "mental health support seniors {province}"
+    
+    research_checklist:
+      - "Find current senior isolation statistics for province"
+      - "Locate community social programs in market"
+      - "Identify volunteer visitor organizations"
+      - "Find mental health resources for seniors"
+
+  week_4:
+    theme: dementia_awareness
+    description: "Dementia Care Focus - Alzheimer's support, memory care, family strategies"
+    seasonal_context: "Late January/Early February - Year-round critical topic"
+    target_dates: "Jan 22-28"
+    
+    local_hook_types:
+      - "Alzheimer Society local chapter programs"
+      - "Provincial dementia strategy updates"
+      - "Health authority memory clinic services"
+    
+    local_angle_examples:
+      QC: "Fédération québécoise des Sociétés Alzheimer programs"
+      ON: "Ontario Dementia Strategy and local support services"
+      BC: "BC Alzheimer Society First Link navigation"
+      MB: "Alzheimer Society of Manitoba caregiver support"
+      AB: "Alberta Dementia Strategy and community resources"
+    
+    must_include:
+      - "Cite dementia prevalence statistics for Canada (with source)"
+      - "Reference local Alzheimer Society program by name"
+      - "Include family caregiver support resources"
+    
+    cta_focus: "dementia"
+    cta_intent: "specialized dementia care"
+    
+    theme_keywords:
+      long_tail:
+        - "dementia care at home {city}"
+        - "Alzheimer's support {city}"
+        - "memory care services {city}"
+        - "{health_authority} memory clinic"
+        - "dementia caregiver support {province}"
+        - "early dementia signs elderly"
+    
+    research_checklist:
+      - "Find current dementia statistics for province"
+      - "Locate Alzheimer Society chapter programs"
+      - "Identify health authority memory clinics"
+      - "Find caregiver support group information"
+
+  week_5:
+    theme: heart_health
+    description: "Heart Health Month - Cardiac care, heart disease management, recovery"
+    seasonal_context: "February - Heart Month in Canada, cold weather cardiac risks"
+    target_dates: "Jan 29 - Feb 4"
+    
+    local_hook_types:
+      - "Heart and Stroke Foundation local programs"
+      - "Provincial cardiac rehabilitation services"
+      - "Health authority heart health initiatives"
+    
+    local_angle_examples:
+      QC: "Quebec cardiac rehabilitation through CLSC network"
+      ON: "Cardiac Care Network of Ontario resources"
+      BC: "BC Cardiac Services cardiac rehabilitation"
+      MB: "Reh-Fit Centre cardiac rehabilitation Winnipeg"
+      AB: "TotalCardiology cardiac rehab Calgary"
+    
+    must_include:
+      - "Cite heart disease statistics for Canadian seniors (with source)"
+      - "Reference Heart and Stroke Foundation program"
+      - "Include post-cardiac surgery home care information"
+    
+    cta_focus: "heart-health"
+    cta_intent: "cardiac care support"
+    
+    theme_keywords:
+      long_tail:
+        - "cardiac care at home {city}"
+        - "post heart surgery recovery {city}"
+        - "heart health seniors {province}"
+        - "{health_authority} cardiac rehabilitation"
+        - "heart disease home care support"
+        - "cardiovascular wellness elderly"
+    
+    research_checklist:
+      - "Find current heart disease statistics for seniors"
+      - "Locate cardiac rehabilitation programs in market"
+      - "Identify Heart and Stroke local initiatives"
+      - "Find cold weather cardiac risk information"
+
+  week_6:
+    theme: valentines_companionship
+    description: "Valentine's Day - Companionship, emotional support, preventing loneliness"
+    seasonal_context: "Mid-February - Valentine's Day (Feb 14)"
+    target_dates: "Feb 5-14"
+    
+    local_hook_types:
+      - "Senior social events and gatherings"
+      - "Intergenerational connection programs"
+      - "Valentine's volunteer visitor initiatives"
+    
+    local_angle_examples:
+      QC: "Montreal seniors' Valentine social programs"
+      ON: "Toronto seniors' centres Valentine events"
+      BC: "Vancouver Park Board seniors' social programs"
+      MB: "Winnipeg Age & Opportunity Valentine activities"
+      AB: "Calgary Kerby Centre social programs"
+    
+    must_include:
+      - "Cite senior loneliness impact statistics (with source)"
+      - "Reference local senior centre or social program"
+      - "Include companionship care benefits for emotional wellbeing"
+    
+    cta_focus: "companion-care"
+    cta_intent: "companionship and connection"
+    
+    theme_keywords:
+      long_tail:
+        - "senior companionship {city}"
+        - "elderly loneliness prevention {city}"
+        - "companion care benefits {province}"
+        - "senior social programs {city}"
+        - "emotional support elderly {city}"
+        - "Valentine's Day seniors activities {city}"
+    
+    research_checklist:
+      - "Find Valentine's senior events in market"
+      - "Locate companionship statistics research"
+      - "Identify intergenerational programs"
+      - "Find senior centre social calendars"
+
+  week_7:
+    theme: tax_season_prep
+    description: "Tax Season Preparation - Medical expense credits, caregiver benefits, deductions"
+    seasonal_context: "Late February - Tax preparation (deadline April 30)"
+    target_dates: "Feb 15-28"
+    
+    local_hook_types:
+      - "Provincial senior tax credit programs"
+      - "Free tax preparation services for seniors"
+      - "CRA medical expense updates"
+    
+    local_angle_examples:
+      QC: "Quebec senior tax credits and Revenu Québec resources"
+      ON: "Ontario Seniors Care at Home Tax Credit"
+      BC: "BC Senior's Home Renovation Tax Credit"
+      MB: "Manitoba Primary Caregiver Tax Credit"
+      AB: "Alberta seniors benefits and property tax programs"
+    
+    must_include:
+      - "Cite specific provincial tax credit with eligibility"
+      - "Reference CRA medical expense eligible items"
+      - "Include free tax preparation resources for seniors"
+    
+    cta_focus: "getting-started"
+    cta_intent: "care cost assessment"
+    
+    theme_keywords:
+      long_tail:
+        - "home care tax credit {province}"
+        - "medical expense deduction elderly care"
+        - "caregiver tax benefits {province}"
+        - "{province} senior tax credits 2026"
+        - "CRA eligible home care expenses"
+        - "free tax help seniors {city}"
+    
+    research_checklist:
+      - "Find current provincial tax credit details"
+      - "Locate CRA medical expense eligible items list"
+      - "Identify free tax preparation for seniors in market"
+      - "Find caregiver tax benefit information"
+
+  week_8:
+    theme: hospital_to_home
+    description: "Post-Hospital Transitions - Safe discharge, recovery at home, readmission prevention"
+    seasonal_context: "March - Post-flu season hospital discharges"
+    target_dates: "Mar 1-14"
+    
+    local_hook_types:
+      - "Health authority discharge planning services"
+      - "Provincial transitional care programs"
+      - "Hospital at home initiatives"
+    
+    local_angle_examples:
+      QC: "Quebec CLSC post-hospital home care coordination"
+      ON: "Ontario Home and Community Care Support Services transitions"
+      BC: "VCH/Fraser Health discharge planning programs"
+      MB: "WRHA Bridging Program for hospital transitions"
+      AB: "AHS Continuing Care Connection discharge support"
+    
+    must_include:
+      - "Cite hospital readmission statistics (with source)"
+      - "Reference health authority discharge program"
+      - "Include 30-day post-discharge care checklist"
+    
+    cta_focus: "hospital-to-home"
+    cta_intent: "discharge transition support"
+    
+    theme_keywords:
+      long_tail:
+        - "hospital to home care {city}"
+        - "post-discharge support {city}"
+        - "preventing hospital readmission {province}"
+        - "{health_authority} discharge planning"
+        - "recovery care at home {city}"
+        - "transitional care services {city}"
+    
+    research_checklist:
+      - "Find readmission prevention statistics"
+      - "Locate health authority discharge programs"
+      - "Identify transitional care services in market"
+      - "Find post-discharge checklist resources"
+
+  week_9:
+    theme: spring_preparation
+    description: "Preparing for Spring - Home safety, thaw hazards, spring cleaning safety"
+    seasonal_context: "Mid-March - Thaw begins, slippery conditions"
+    target_dates: "Mar 15-31"
+    
+    local_hook_types:
+      - "Spring home safety assessment programs"
+      - "Home modification grants for seniors"
+      - "Municipal accessibility improvements"
+    
+    local_angle_examples:
+      QC: "Quebec Société d'habitation home adaptation grants"
+      ON: "Ontario Healthy Homes Renovation Tax Credit"
+      BC: "BC HAFI (Home Adaptations for Independence) grants"
+      MB: "Manitoba Housing home modification programs"
+      AB: "Alberta Seniors Home Adaptation and Repair Program"
+    
+    must_include:
+      - "Cite spring fall injury statistics (with source)"
+      - "Reference provincial home modification grant program"
+      - "Include spring home safety checklist"
+    
+    cta_focus: "getting-started"
+    cta_intent: "home safety assessment"
+    
+    theme_keywords:
+      long_tail:
+        - "spring home safety seniors {city}"
+        - "fall prevention thaw season {province}"
+        - "senior home modification grants {province}"
+        - "spring cleaning safety elderly"
+        - "{province} HAFI grants seniors"
+        - "home accessibility improvements {city}"
+    
+    research_checklist:
+      - "Find spring injury statistics for seniors"
+      - "Locate home modification grant programs"
+      - "Identify spring safety resources"
+      - "Find municipal accessibility information"
+
+  week_10:
+    theme: parkinsons_awareness
+    description: "Parkinson's Awareness Month - Movement disorders, tremor management, daily living"
+    seasonal_context: "April - Parkinson's Awareness Month"
+    target_dates: "Apr 1-14"
+    
+    local_hook_types:
+      - "Parkinson Canada local programs"
+      - "Provincial movement disorder clinics"
+      - "Parkinson's awareness events"
+    
+    local_angle_examples:
+      QC: "Parkinson Québec regional support groups"
+      ON: "Parkinson Canada Ontario education programs"
+      BC: "Pacific Parkinson's Research Centre resources"
+      MB: "Parkinson Canada Prairies support services"
+      AB: "Movement Disorders Clinic Calgary/Edmonton"
+    
+    must_include:
+      - "Cite Parkinson's prevalence in Canada (with source)"
+      - "Reference Parkinson Canada program or clinic"
+      - "Include daily living support strategies"
+    
+    cta_focus: "parkinsons"
+    cta_intent: "Parkinson's care support"
+    
+    theme_keywords:
+      long_tail:
+        - "Parkinson's home care {city}"
+        - "movement disorder support {city}"
+        - "tremor management elderly {province}"
+        - "Parkinson's daily living {city}"
+        - "{health_authority} movement disorder clinic"
+        - "Parkinson Canada {province} programs"
+    
+    research_checklist:
+      - "Find current Parkinson's statistics for Canada"
+      - "Locate Parkinson Canada regional programs"
+      - "Identify movement disorder clinics in market"
+      - "Find April awareness events"
+
+  week_11:
+    theme: stroke_awareness
+    description: "Stroke Awareness Month - Stroke recovery, rehabilitation, long-term care"
+    seasonal_context: "Late April - Stroke Awareness Month"
+    target_dates: "Apr 15-30"
+    
+    local_hook_types:
+      - "Provincial stroke networks"
+      - "Heart and Stroke local programs"
+      - "Stroke rehabilitation services"
+    
+    local_angle_examples:
+      QC: "Quebec Stroke Network (Réseau québécois de l'AVC)"
+      ON: "Ontario Stroke Network rehabilitation services"
+      BC: "BC Stroke Services and rehab programs"
+      MB: "HSC Winnipeg stroke rehabilitation"
+      AB: "Calgary Stroke Program and rehabilitation"
+    
+    must_include:
+      - "Cite stroke statistics for Canadian seniors (with source)"
+      - "Reference provincial stroke network or program"
+      - "Include stroke recovery timeline information"
+    
+    cta_focus: "stroke"
+    cta_intent: "stroke recovery support"
+    
+    theme_keywords:
+      long_tail:
+        - "stroke recovery home care {city}"
+        - "post-stroke rehabilitation {city}"
+        - "stroke support services {province}"
+        - "{health_authority} stroke program"
+        - "brain injury recovery {city}"
+        - "stroke caregiver support {province}"
+    
+    research_checklist:
+      - "Find current stroke statistics for province"
+      - "Locate stroke rehabilitation programs"
+      - "Identify Heart and Stroke resources"
+      - "Find stroke awareness month events"
+
+  week_12:
+    theme: palliative_care
+    description: "Palliative and End-of-Life Care - Comfort care, hospice, family support"
+    seasonal_context: "May - National Hospice Palliative Care Week"
+    target_dates: "May 1-14"
+    
+    local_hook_types:
+      - "Provincial palliative care programs"
+      - "Hospice society resources"
+      - "End-of-life planning tools"
+    
+    local_angle_examples:
+      QC: "Maison de soins palliatifs Montreal/Quebec programs"
+      ON: "Hospice Palliative Care Ontario resources"
+      BC: "BC Centre for Palliative Care and hospice services"
+      MB: "Palliative Manitoba and Grace Hospice"
+      AB: "Alberta Hospice Palliative Care Association"
+    
+    must_include:
+      - "Reference provincial palliative care program"
+      - "Include hospice vs palliative care explanation"
+      - "Reference advance care planning resources"
+    
+    cta_focus: "end-of-life"
+    cta_intent: "compassionate end-of-life care"
+    
+    theme_keywords:
+      long_tail:
+        - "palliative care at home {city}"
+        - "hospice services {city}"
+        - "end of life care {province}"
+        - "comfort care elderly {city}"
+        - "{province} palliative care program"
+        - "advance care planning {province}"
+    
+    research_checklist:
+      - "Find palliative care access statistics"
+      - "Locate hospice services in market"
+      - "Identify advance care planning resources"
+      - "Find National Hospice Week events"
+
+# CTA and service page mapping by theme
+theme_service_mapping:
+  new_year_care_planning: "getting-started"
+  winter_safety: "hospital-to-home"
+  winter_isolation: "companion-care"
+  dementia_awareness: "dementia"
+  heart_health: "heart-health"
+  valentines_companionship: "companion-care"
+  tax_season_prep: "getting-started"
+  hospital_to_home: "hospital-to-home"
+  spring_preparation: "getting-started"
+  parkinsons_awareness: "parkinsons"
+  stroke_awareness: "stroke"
+  palliative_care: "end-of-life"
+
+# Anti-sameness rules
+anti_sameness:
+  h2_uniqueness_percent: 50
+  faq_unique_vs_other_markets: 4
+  unique_story_lead_per_market: true
+  story_lead_rotation:
+    - scene
+    - question
+    - statistic
+  banned_openers:
+    - "Many families"
+    - "As we age"
+    - "In today's world"
+    - "It's no secret"
+    - "When it comes to"
+    - "There's no doubt"
+    - "In recent years"
+    - "As we all know"
+    - "For many people"
+  primary_keyword_unique_per_run: true

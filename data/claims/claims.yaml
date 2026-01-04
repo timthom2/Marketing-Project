@@ -1,0 +1,189 @@
+version: "1.0"
+description: "Vetted statistics and claims with source URLs for use in articles"
+last_updated: "2025-12-15"
+
+# National-level statistics (usable in any market)
+national:
+  aging_in_place:
+    - stat: "93% of Canadian seniors prefer to age in their own homes"
+      source: "Canadian Institute for Health Information"
+      source_url: "https://www.cihi.ca/en/topics/seniors-and-aging"
+      year: 2023
+      accessed: "2025-12-15"
+    - stat: "By 2036, seniors will represent nearly 25% of Canada's population"
+      source: "Statistics Canada"
+      source_url: "https://www150.statcan.gc.ca/n1/pub/91-520-x/91-520-x2022001-eng.htm"
+      year: 2022
+      accessed: "2025-12-15"
+    - stat: "Home care can delay long-term care placement by up to 2 years"
+      source: "Canadian Institute for Health Information"
+      source_url: "https://www.cihi.ca/en/home-care"
+      year: 2023
+      accessed: "2025-12-15"
+  
+  falls:
+    - stat: "Falls are the leading cause of injury among Canadian seniors, accounting for 85% of injury-related hospitalizations"
+      source: "Public Health Agency of Canada"
+      source_url: "https://www.canada.ca/en/public-health/services/health-promotion/aging-seniors/publications/publications-general-public/seniors-falls-canada-second-report.html"
+      year: 2022
+      accessed: "2025-12-15"
+    - stat: "One in three Canadians aged 65+ falls each year"
+      source: "Public Health Agency of Canada"
+      source_url: "https://www.canada.ca/en/public-health/services/health-promotion/aging-seniors/publications/publications-general-public/seniors-falls-canada-second-report.html"
+      year: 2022
+      accessed: "2025-12-15"
+  
+  dementia:
+    - stat: "Over 597,000 Canadians are currently living with dementia"
+      source: "Alzheimer Society of Canada"
+      source_url: "https://alzheimer.ca/en/about-dementia/what-dementia/dementia-numbers"
+      year: 2024
+      accessed: "2025-12-15"
+    - stat: "By 2030, the number of Canadians with dementia is expected to rise to 912,000"
+      source: "Alzheimer Society of Canada"
+      source_url: "https://alzheimer.ca/en/about-dementia/what-dementia/dementia-numbers"
+      year: 2024
+      accessed: "2025-12-15"
+  
+  caregivers:
+    - stat: "8.1 million Canadians are family caregivers"
+      source: "Statistics Canada"
+      source_url: "https://www150.statcan.gc.ca/n1/pub/75-006-x/2020001/article/00001-eng.htm"
+      year: 2020
+      accessed: "2025-12-15"
+    - stat: "Family caregivers provide an estimated $25 billion worth of unpaid care annually"
+      source: "Ontario Caregiver Organization"
+      source_url: "https://ontariocaregiver.ca/caring-in-canada/"
+      year: 2023
+      accessed: "2025-12-15"
+
+# Province-level statistics
+quebec:
+  home_care:
+    - stat: "Quebec invests over $3 billion annually in home care services"
+      source: "Quebec Budget 2023-2024"
+      source_url: "https://www.budget.finances.gouv.qc.ca/budget/2023-2024/en/documents/BudgetPlan.pdf"
+      year: 2023
+      accessed: "2025-12-15"
+    - stat: "Over 200,000 Quebec seniors receive some form of home care services annually"
+      source: "Ministère de la Santé et des Services sociaux du Québec"
+      source_url: "https://www.msss.gouv.qc.ca/professionnels/statistiques-donnees-sante-bien-etre/"
+      year: 2023
+      accessed: "2025-12-15"
+  clsc:
+    - stat: "Quebec's CLSC network serves over 165 communities across the province"
+      source: "MSSS du Québec"
+      source_url: "https://www.msss.gouv.qc.ca/repertoires/clsc/"
+      year: 2023
+      accessed: "2025-12-15"
+
+ontario:
+  home_care:
+    - stat: "Over 700,000 Ontarians receive publicly funded home care annually"
+      source: "Ontario Health"
+      source_url: "https://www.ontariohealth.ca/our-work/programs/home-and-community-care"
+      year: 2023
+      accessed: "2025-12-15"
+    - stat: "Ontario invests $5.2 billion annually in home and community care"
+      source: "Ontario Budget 2023-2024"
+      source_url: "https://budget.ontario.ca/2023/contents.html"
+      year: 2023
+      accessed: "2025-12-15"
+  tax_credits:
+    - stat: "Ontario Seniors Care at Home Tax Credit provides up to $1,500 for eligible medical expenses"
+      source: "Government of Ontario"
+      source_url: "https://www.ontario.ca/page/ontario-seniors-care-at-home-tax-credit"
+      year: 2024
+      accessed: "2025-12-15"
+
+british_columbia:
+  home_care:
+    - stat: "BC spends over $2.8 billion annually on home and community care"
+      source: "BC Ministry of Health"
+      source_url: "https://www2.gov.bc.ca/gov/content/governments/finances/budget"
+      year: 2023
+      accessed: "2025-12-15"
+    - stat: "Over 100,000 BC seniors receive publicly funded home care services"
+      source: "BC Patient Safety & Quality Council"
+      source_url: "https://bcpsqc.ca/"
+      year: 2023
+      accessed: "2025-12-15"
+  csil:
+    - stat: "BC's CSIL program allows over 6,000 clients to self-direct their care"
+      source: "BC Ministry of Health"
+      source_url: "https://www2.gov.bc.ca/gov/content/health/accessing-health-care/home-community-care/care-options-and-cost/choice-in-supports-for-independent-living"
+      year: 2023
+      accessed: "2025-12-15"
+
+manitoba:
+  home_care:
+    - stat: "Over 30,000 Manitobans receive home care services annually"
+      source: "Manitoba Health"
+      source_url: "https://www.gov.mb.ca/health/homecare/"
+      year: 2023
+      accessed: "2025-12-15"
+    - stat: "Manitoba invests $350 million annually in home care"
+      source: "Manitoba Budget 2023-2024"
+      source_url: "https://www.gov.mb.ca/finance/budget/"
+      year: 2023
+      accessed: "2025-12-15"
+
+alberta:
+  home_care:
+    - stat: "Over 80,000 Albertans receive AHS home care services annually"
+      source: "Alberta Health Services"
+      source_url: "https://www.albertahealthservices.ca/cc/Page15339.aspx"
+      year: 2023
+      accessed: "2025-12-15"
+    - stat: "Alberta invests $1.6 billion annually in continuing care"
+      source: "Alberta Budget 2023-2024"
+      source_url: "https://www.alberta.ca/budget"
+      year: 2023
+      accessed: "2025-12-15"
+
+# Theme-specific statistics
+themes:
+  winter_safety:
+    - stat: "Winter falls account for over 50% of fall-related injuries among Canadian seniors"
+      source: "Public Health Agency of Canada"
+      source_url: "https://www.canada.ca/en/public-health/services/health-promotion/aging-seniors.html"
+      year: 2022
+      accessed: "2025-12-15"
+    - stat: "Hypothermia risk increases 3x for seniors aged 75+"
+      source: "Health Canada"
+      source_url: "https://www.canada.ca/en/health-canada/services/healthy-living/your-health/environment/extreme-cold.html"
+      year: 2022
+      accessed: "2025-12-15"
+  
+  tax_season_prep:
+    - stat: "The Medical Expense Tax Credit can save families up to 25% of eligible home care costs"
+      source: "Canada Revenue Agency"
+      source_url: "https://www.canada.ca/en/revenue-agency/services/tax/individuals/topics/about-your-tax-return/tax-return/completing-a-tax-return/deductions-credits-expenses/lines-33099-33199-eligible-medical-expenses-you-claim-on-your-tax-return.html"
+      year: 2024
+      accessed: "2025-12-15"
+  
+  dementia:
+    - stat: "Early intervention can slow dementia progression and improve quality of life for 2-5 years"
+      source: "Alzheimer Society of Canada"
+      source_url: "https://alzheimer.ca/en/help-support/im-living-dementia/treating-dementia"
+      year: 2024
+      accessed: "2025-12-15"
+  
+  hospital_to_home:
+    - stat: "30-day hospital readmission rates drop by 25% with coordinated home care support"
+      source: "Canadian Institute for Health Information"
+      source_url: "https://www.cihi.ca/en/patient-experience"
+      year: 2023
+      accessed: "2025-12-15"
+  
+  companion_care:
+    - stat: "Seniors who experience loneliness have a 26% higher risk of mortality"
+      source: "Statistics Canada"
+      source_url: "https://www150.statcan.gc.ca/n1/pub/82-003-x/2021012/article/00001-eng.htm"
+      year: 2021
+      accessed: "2025-12-15"
+    - stat: "Regular social interaction reduces cognitive decline risk by up to 70%"
+      source: "Public Health Agency of Canada"
+      source_url: "https://www.canada.ca/en/public-health/services/health-promotion/aging-seniors.html"
+      year: 2022
+      accessed: "2025-12-15"

@@ -1,0 +1,18 @@
+[Unit]
+Description=TheKey Canada SEO Content Bot
+After=network.target
+
+[Service]
+Type=simple
+User=thekey
+WorkingDirectory=/home/thekey/thekey-content-bot
+Environment="PATH=/home/thekey/thekey-content-bot/venv/bin"
+Environment="TZ=America/Toronto"
+ExecStart=/home/thekey/thekey-content-bot/venv/bin/python -m src.run_weekly
+Restart=on-failure
+RestartSec=300
+StandardOutput=journal
+StandardError=journal
+
+[Install]
+WantedBy=multi-user.target

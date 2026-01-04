@@ -1,0 +1,563 @@
+version: "3.0"
+
+boilerplate:
+  text: |
+    At TheKey, we provide premium, white-glove home care designed to help your loved one age with dignity and independence.
+  word_count: 20
+
+medical_disclaimer:
+  text: |
+    This content is for informational purposes only and does not constitute medical advice.
+  word_count: 15
+
+# CTA Templates by Intent and Market
+cta_templates:
+  # Default CTA
+  default:
+    text: "Discover how TheKey can help your loved one thrive at home."
+    url: "https://thekey.ca/getting-started"
+  
+  # Intent-specific CTAs with market variants
+  by_intent:
+    getting_started:
+      default: "Get a free care assessment for {city}"
+      button_text: "Start Your Care Assessment"
+      url: "https://thekey.ca/getting-started"
+      variants:
+        montreal: "Obtenez une évaluation gratuite à Montréal | Get a free Montreal care assessment"
+        toronto: "Request a free care assessment in Toronto"
+        vancouver: "Connect with a Vancouver care coordinator today"
+        calgary: "Get a free Calgary care consultation"
+        winnipeg: "Request a care assessment in Winnipeg"
+        surrey: "Connect with a Surrey care coordinator"
+        victoria: "Get a free Victoria care assessment"
+        oakville: "Request a care assessment in Oakville"
+    
+    dementia:
+      default: "Learn about specialized dementia care in {city}"
+      button_text: "Explore Dementia Care"
+      url: "https://thekey.ca/our-services/dementia-and-alzheimers-care"
+      variants:
+        montreal: "Discover memory care options in Montreal"
+        toronto: "Find specialized Alzheimer's care in Toronto"
+        vancouver: "Learn about VCH-compatible dementia care in Vancouver"
+        calgary: "Explore dementia care services in Calgary"
+        winnipeg: "Connect with dementia specialists in Winnipeg"
+        surrey: "Find memory care support in Surrey"
+        victoria: "Explore Island Health dementia care options in Victoria"
+        oakville: "Discover specialized dementia care in Oakville"
+    
+    hospital_to_home:
+      default: "Ensure a smooth transition from hospital to home in {city}"
+      button_text: "Learn About Discharge Support"
+      url: "https://thekey.ca/our-services/hospital-to-home"
+      variants:
+        montreal: "Support your loved one's hospital discharge in Montreal"
+        toronto: "Get Toronto hospital-to-home transition support"
+        vancouver: "Coordinate post-discharge care with VCH"
+        calgary: "Navigate AHS discharge with expert support"
+        winnipeg: "Get WRHA-coordinated discharge support in Winnipeg"
+        surrey: "Coordinate Fraser Health discharge transition in Surrey"
+        victoria: "Get Island Health discharge support in Victoria"
+        oakville: "Ensure a smooth Halton hospital discharge"
+    
+    companion_care:
+      default: "Discover companionship care services in {city}"
+      button_text: "Explore Companion Care"
+      url: "https://thekey.ca/our-services/companion-care"
+      variants:
+        montreal: "Find companionship care in Montreal"
+        toronto: "Connect your loved one with Toronto companion care"
+        vancouver: "Explore companionship services in Vancouver"
+        calgary: "Discover companion care in Calgary"
+        winnipeg: "Find companionship care in Winnipeg"
+        surrey: "Connect with companion care in Surrey"
+        victoria: "Explore companionship services in Victoria"
+        oakville: "Find companion care in Oakville"
+    
+    parkinsons:
+      default: "Get specialized Parkinson's care in {city}"
+      button_text: "Explore Parkinson's Care"
+      url: "https://thekey.ca/our-services/parkinsons-care"
+      variants:
+        montreal: "Find Parkinson's care specialists in Montreal"
+        toronto: "Connect with Parkinson's care in Toronto"
+        vancouver: "Explore movement disorder care in Vancouver"
+        calgary: "Discover Parkinson's support in Calgary"
+        winnipeg: "Find Parkinson's care in Winnipeg"
+    
+    stroke:
+      default: "Support your loved one's stroke recovery in {city}"
+      button_text: "Explore Stroke Recovery Care"
+      url: "https://thekey.ca/our-services/stroke-recovery-care"
+      variants:
+        montreal: "Find stroke recovery support in Montreal"
+        toronto: "Connect with stroke rehabilitation care in Toronto"
+        vancouver: "Get BC stroke recovery support in Vancouver"
+        calgary: "Explore Calgary stroke recovery services"
+        winnipeg: "Find stroke rehabilitation support in Winnipeg"
+    
+    heart_health:
+      default: "Manage heart health at home in {city}"
+      button_text: "Explore Heart Health Care"
+      url: "https://thekey.ca/our-services/heart-health-care"
+      variants:
+        montreal: "Get cardiac care support in Montreal"
+        toronto: "Find heart health care in Toronto"
+        vancouver: "Explore cardiac care in Vancouver"
+        calgary: "Manage heart health at home in Calgary"
+        winnipeg: "Find heart health support in Winnipeg"
+    
+    end_of_life:
+      default: "Find compassionate end-of-life care in {city}"
+      button_text: "Explore End-of-Life Care"
+      url: "https://thekey.ca/our-services/end-of-life-care"
+      variants:
+        montreal: "Discover compassionate palliative care in Montreal"
+        toronto: "Find end-of-life support in Toronto"
+        vancouver: "Explore BC palliative care options in Vancouver"
+        calgary: "Connect with end-of-life care in Calgary"
+        winnipeg: "Find palliative care in Winnipeg"
+    
+    tax_credit:
+      default: "Learn how home care expenses may qualify for tax credits"
+      button_text: "Get Started with TheKey"
+      url: "https://thekey.ca/getting-started"
+      variants:
+        montreal: "Explore Quebec tax credits for home care in Montreal"
+        toronto: "Learn about Ontario Seniors Care at Home Tax Credit"
+        vancouver: "Discover BC home care deductions"
+        calgary: "Explore Alberta home care tax benefits"
+        winnipeg: "Learn about Manitoba caregiver tax credits"
+        oakville: "Maximize Ontario tax credits for home care"
+
+# Theme to Service Page Mapping
+theme_service_mapping:
+  new_year_care_planning:
+    service: "getting-started"
+    url: "https://thekey.ca/getting-started"
+    anchor: "care assessment"
+  
+  winter_safety:
+    service: "hospital-to-home"
+    url: "https://thekey.ca/our-services/hospital-to-home"
+    anchor: "fall recovery support"
+  
+  winter_isolation:
+    service: "companion-care"
+    url: "https://thekey.ca/our-services/companion-care"
+    anchor: "companion care"
+  
+  dementia_awareness:
+    service: "dementia"
+    url: "https://thekey.ca/our-services/dementia-and-alzheimers-care"
+    anchor: "dementia care"
+  
+  heart_health:
+    service: "heart-health"
+    url: "https://thekey.ca/our-services/heart-health-care"
+    anchor: "cardiac care"
+  
+  valentines_companionship:
+    service: "companion-care"
+    url: "https://thekey.ca/our-services/companion-care"
+    anchor: "companionship care"
+  
+  tax_season_prep:
+    service: "getting-started"
+    url: "https://thekey.ca/getting-started"
+    anchor: "care costs and tax credits"
+  
+  hospital_to_home:
+    service: "hospital-to-home"
+    url: "https://thekey.ca/our-services/hospital-to-home"
+    anchor: "hospital discharge support"
+  
+  spring_preparation:
+    service: "getting-started"
+    url: "https://thekey.ca/getting-started"
+    anchor: "home safety assessment"
+  
+  parkinsons_awareness:
+    service: "parkinsons"
+    url: "https://thekey.ca/our-services/parkinsons-care"
+    anchor: "Parkinson's care"
+  
+  stroke_awareness:
+    service: "stroke"
+    url: "https://thekey.ca/our-services/stroke-recovery-care"
+    anchor: "stroke recovery"
+  
+  palliative_care:
+    service: "end-of-life"
+    url: "https://thekey.ca/our-services/end-of-life-care"
+    anchor: "end-of-life care"
+
+# Internal Link Templates by Market
+internal_link_templates:
+  location_pages:
+    montreal: "https://thekey.ca/locations/canada/montreal"
+    toronto: "https://thekey.ca/locations/canada/toronto"
+    vancouver: "https://thekey.ca/locations/canada/vancouver"
+    calgary: "https://thekey.ca/locations/canada/calgary"
+    winnipeg: "https://thekey.ca/locations/canada/winnipeg"
+    surrey: "https://thekey.ca/locations/canada/surrey"
+    victoria: "https://thekey.ca/locations/canada/victoria"
+    oakville: "https://thekey.ca/locations/canada/oakville"
+  
+  anchor_text_by_market:
+    montreal:
+      - "home care in Montreal"
+      - "Montreal senior care services"
+      - "TheKey Montreal"
+    toronto:
+      - "home care in Toronto"
+      - "Toronto senior care services"
+      - "TheKey Toronto"
+    vancouver:
+      - "home care in Vancouver"
+      - "Vancouver senior care services"
+      - "TheKey Vancouver"
+    calgary:
+      - "home care in Calgary"
+      - "Calgary senior care services"
+      - "TheKey Calgary"
+    winnipeg:
+      - "home care in Winnipeg"
+      - "Winnipeg senior care services"
+      - "TheKey Winnipeg"
+    surrey:
+      - "home care in Surrey"
+      - "Surrey senior care services"
+      - "TheKey Surrey"
+    victoria:
+      - "home care in Victoria"
+      - "Victoria senior care services"
+      - "TheKey Victoria"
+    oakville:
+      - "home care in Oakville"
+      - "Oakville senior care services"
+      - "TheKey Oakville"
+
+# Tone Requirements
+tone_requirements:
+  phrasing_norms:
+    - "your loved one"
+    - "aging with dignity"
+    - "independence and safety"
+    - "white-glove care"
+    - "premium home care"
+    - "personalized care plan"
+    - "expert caregivers"
+    - "age in place"
+    - "thrive at home"
+    - "peace of mind"
+  cadence: warm, professional, empathetic
+  structure:
+    - deck_subheadline
+    - skimmable_h2s
+    - bullet_lists
+    - faq_section
+    - inline_local_resources
+  cta_vibe: helpful_invitation
+  voice_characteristics:
+    - "Empathetic and understanding"
+    - "Professional yet approachable"
+    - "Solution-focused"
+    - "Respectful of family decisions"
+    - "Supportive and non-judgmental"
+    - "Clear and accessible"
+  
+  # Effective opening patterns (specific, not generic)
+  effective_opening_patterns:
+    scene: "Picture this: [specific scenario with emotional detail]"
+    question: "[Compelling question that challenges assumptions]?"
+    statistic: "[Surprising statistic from source] — and here's what it means for [city] families"
+  
+  paragraph_structure:
+    - "Lead with a specific scenario, statistic, or insight (never generic statements)"
+    - "Support with evidence from Canadian sources (cite in text)"
+    - "Include actionable next steps the reader can take today"
+    - "Connect to local context (provincial healthcare, local programs)"
+    - "End with forward momentum toward a solution"
+  
+  statistical_citation_style:
+    - "According to the Canadian Institute for Health Information (CIHI)..."
+    - "Statistics Canada reports that..."
+    - "[Province] Health data shows..."
+    - "Research from [University/Organization] indicates..."
+    - "(Source: [Organization], [Year])"
+
+# Canadian English Requirements
+canadian_requirements:
+  spelling_guide:
+    mandatory_replacements:
+      - ["color", "colour"]
+      - ["center", "centre"]
+      - ["behavior", "behaviour"]
+      - ["theater", "theatre"]
+      - ["defense", "defence"]
+      - ["organize", "organise"]
+      - ["recognize", "recognise"]
+      - ["analyze", "analyse"]
+      - ["optimize", "optimise"]
+      - ["specialize", "specialise"]
+      - ["realize", "realise"]
+      - ["finalize", "finalise"]
+      - ["prioritize", "prioritise"]
+      - ["categorize", "categorise"]
+      - ["memorize", "memorise"]
+    word_choices:
+      - ["home health care", "home care"]
+      - ["healthcare", "health care"]
+      - ["eldercare", "elder care"]
+  healthcare_context: "reference provincial healthcare systems by name"
+  org_preference: "prioritize Canadian organizations and data sources over US sources"
+  terminology:
+    - "Use 'home care' not 'home health care'"
+    - "Reference provincial health authorities by full name"
+    - "Use Canadian dollar amounts (CAD $ or $)"
+    - "Reference Canadian programs by name"
+    - "Use Canadian spelling throughout"
+  provincial_references:
+    ontario:
+      - "OHIP (Ontario Health Insurance Plan)"
+      - "Home and Community Care Support Services (HCCSS)"
+      - "Ontario Seniors Care at Home Tax Credit"
+    quebec:
+      - "RAMQ (Régie de l'assurance maladie du Québec)"
+      - "CLSC (Centres locaux de services communautaires)"
+    manitoba:
+      - "Manitoba Health"
+      - "Winnipeg Regional Health Authority (WRHA)"
+      - "Manitoba Home Care Program"
+    alberta:
+      - "Alberta Health Services (AHS)"
+      - "Alberta Health Care Insurance Plan (AHCIP)"
+      - "AHS Continuing Care"
+    british_columbia:
+      - "Medical Services Plan (MSP)"
+      - "Vancouver Coastal Health (VCH)"
+      - "Fraser Health Authority"
+      - "Island Health"
+      - "Choice in Supports for Independent Living (CSIL)"
+
+# Brand Colors
+color_palette:
+  everest: "#06262D"
+  gold: "#D1B886"
+  light_gold: "#F0EEDC"
+  cream: "#F6F4E8"
+  white: "#FFFFFF"
+  muted_text: "#475569"
+  gray_border: "#e5e7eb"
+
+# Typography
+typography:
+  h1:
+    font_family: "'Times New Roman', serif"
+    font_size: "36px"
+    color: "#06262D"
+    margin_bottom: "10px"
+  h2:
+    font_family: "'Times New Roman', serif"
+    font_size: "24px"
+    color: "#06262D"
+    margin_top: "30px"
+  deck_subheadline:
+    font_size: "20px"
+    line_height: "1.75rem"
+    color: "#475569"
+    font_weight: "500"
+    font_style: "italic"
+    margin_top: "-0.5rem"
+    margin_bottom: "2rem"
+  body:
+    font_family: "'Helvetica Neue', Helvetica, Arial, sans-serif"
+    font_size: "16px"
+    line_height: "1.6"
+    color: "#333"
+
+# Styling Patterns (normalized for consistency)
+styling_patterns:
+  hero_image:
+    border_radius: "8px"
+    box_shadow: "0 4px 6px -1px rgba(0, 0, 0, 0.1)"
+    width: "100%"
+    height: "auto"
+    margin_bottom: "2rem"
+  callout_box:
+    background_color: "#F0EEDC"
+    border_left: "4px solid #D1B886"
+    padding: "1.5rem"
+    margin: "1.5rem 0"
+    h3_color: "#06262D"
+    h3_margin_top: "0"
+  cta_box:
+    background_color: "#06262D"
+    color: "white"
+    padding: "2rem"
+    border_radius: "0.5rem"
+    margin_top: "2rem"
+    text_align: "center"
+    h3_color: "white"
+    h3_margin_top: "0"
+    button_background: "#D1B886"
+    button_color: "#06262D"
+    button_padding: "0.75rem 1.5rem"
+    button_border_radius: "0.25rem"
+    button_font_weight: "bold"
+  links:
+    color: "#06262D"
+    text_decoration: "underline"
+    font_weight: "600"
+  hr_divider:
+    border_top: "1px solid #e5e7eb"
+    margin: "2rem 0"
+
+# Content Guidelines
+content_guidelines:
+  word_count:
+    min: 1000
+    max: 1400
+  local_resources:
+    placement: "inline"
+    min_links: 2
+    max_links: 5
+    inline_weaving: true
+    no_detached_blocks: true
+  faqs:
+    count: 5
+    unique_across_markets: 4
+  callout_boxes:
+    count: 1
+    style: light_gold
+  h2_sections:
+    min: 4
+    max: 6
+    min_unique_per_market: 2
+    should_include_bullets: true
+  seo_requirements:
+    primary_keyword_in_h1: true
+    primary_keyword_density: "1.5-2.5%"
+    secondary_keywords_naturally_placed: true
+    internal_links_min: 2
+    external_links_min: 2
+    meta_title_max_chars: 60
+    meta_title_no_ellipsis: true
+    meta_title_keyword_early: true
+    meta_description_min_chars: 150
+    meta_description_max_chars: 160
+    meta_description_has_keyword: true
+
+# Anti-Sameness Rules
+anti_sameness:
+  # H2 uniqueness requirements
+  h2_uniqueness:
+    min_unique_percent: 50
+    market_specific_h2_required: true
+    seed_h2s_from_market_config: true
+  
+  # FAQ uniqueness requirements
+  faq_uniqueness:
+    min_unique_vs_other_markets: 4
+    total_faqs: 5
+  
+  # Story lead rotation (unique per market in run)
+  story_lead_rotation:
+    enforce_unique_per_market: true
+    types:
+      - scene
+      - question
+      - statistic
+  
+  # Primary keyword uniqueness
+  keyword_uniqueness:
+    no_duplicate_primary_in_run: true
+    secondary_must_materially_differ: true
+  
+  # Banned openers (fail if found)
+  banned_openers:
+    - "Many families"
+    - "As we age"
+    - "In today's world"
+    - "It's no secret that"
+    - "When it comes to"
+    - "There's no doubt that"
+    - "In recent years"
+    - "As we all know"
+    - "For many people"
+    - "It goes without saying"
+    - "In this article"
+    - "Today, we will"
+  
+  # Banned phrases anywhere in body
+  banned_phrases:
+    - "accessed on"  # Without URL
+    - "click here"
+    - "read more"
+    - "this article"
+    - "in conclusion"
+
+# Required Elements (fail if missing)
+required_elements:
+  statistics:
+    min_count: 2
+    require_source_url: true
+    require_inline_citation: true
+  
+  local_authority_links:
+    min_count: 1
+    types:
+      - provincial_government
+      - health_authority
+      - municipal
+  
+  faq_section:
+    required: true
+    min_questions: 5
+  
+  internal_links:
+    min_count: 2
+    include_location_page: true
+    include_service_page: true
+  
+  external_links:
+    min_count: 2
+    must_be_authoritative: true
+  
+  meta:
+    title_required: true
+    description_required: true
+
+# Image Requirements
+image_requirements:
+  query_must_include_city: true
+  unique_image_per_market: true
+  unique_alt_text_per_market: true
+  fallback_by_province:
+    ontario: ["Toronto", "Ontario", "Canadian city winter", "senior home safety"]
+    quebec: ["Montreal", "Quebec", "Canadian city", "elderly care"]
+    british_columbia: ["Vancouver", "BC", "Pacific Northwest", "senior wellness"]
+    alberta: ["Calgary", "Alberta", "Rocky Mountains", "senior safety"]
+    manitoba: ["Winnipeg", "Manitoba", "Canadian prairie", "elderly support"]
+
+# Quality Thresholds for Run Validation
+quality_thresholds:
+  min_word_count: 1000
+  max_word_count: 1400
+  min_local_links: 1
+  min_cited_stats: 2
+  min_internal_links: 2
+  min_external_links: 2
+  faq_required: true
+  faq_min_questions: 5
+  meta_title_max_chars: 60
+  meta_description_min_chars: 150
+  meta_description_max_chars: 160
+  keyword_density_min: 1.5
+  keyword_density_max: 2.5
+  h2_unique_percentage: 50
+  fail_on_banned_opener: true
+  fail_on_missing_stat: true
+  fail_on_missing_faq: true

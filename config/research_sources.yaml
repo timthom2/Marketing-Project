@@ -1,0 +1,247 @@
+version: "2.0"
+description: "Research source governance with strict trust policies"
+
+source_policy:
+  max_pages_per_market: 8
+  min_province_level_sources: 2
+  max_age_days: 365
+  language_filter: "en,fr"
+  relevance_threshold: 0.7
+  require_source_attribution: true
+  fail_on_no_provincial_source: true
+
+# Tier 1: Always trusted, prioritize these
+trusted_domains:
+  federal_government:
+    - "canada.ca"
+    - "gc.ca"
+    - "statcan.gc.ca"
+    - "phac-aspc.gc.ca"
+    - "cihi.ca"
+    - "seniors.gc.ca"
+  
+  provincial_government:
+    quebec:
+      - "quebec.ca"
+      - "gouv.qc.ca"
+      - "ramq.gouv.qc.ca"
+      - "msss.gouv.qc.ca"
+    ontario:
+      - "ontario.ca"
+      - "ontariohealth.ca"
+      - "healthcareathome.ca"
+    british_columbia:
+      - "gov.bc.ca"
+      - "healthlinkbc.ca"
+    alberta:
+      - "alberta.ca"
+      - "albertahealthservices.ca"
+    manitoba:
+      - "gov.mb.ca"
+      - "wrha.mb.ca"
+    saskatchewan:
+      - "saskatchewan.ca"
+      - "saskhealthauthority.ca"
+  
+  municipal_government:
+    - "montreal.ca"
+    - "toronto.ca"
+    - "vancouver.ca"
+    - "calgary.ca"
+    - "winnipeg.ca"
+    - "ottawa.ca"
+    - "edmonton.ca"
+    - "surrey.ca"
+    - "victoria.ca"
+    - "oakville.ca"
+    - "halton.ca"
+  
+  health_authorities:
+    - "vch.ca"
+    - "fraserhealth.ca"
+    - "islandhealth.ca"
+    - "interiorhealth.ca"
+    - "northernhealth.ca"
+    - "ahs.ca"
+    - "wrha.mb.ca"
+    - "santemontreal.qc.ca"
+  
+  internal:
+    - "thekey.com"
+    - "thekey.ca"
+
+# Tier 2: Allowed but not prioritized
+allowed_domains:
+  national_nonprofits:
+    - "alzheimer.ca"
+    - "parkinson.ca"
+    - "heartandstroke.ca"
+    - "cancer.ca"
+    - "patientsafetyinstitute.ca"
+    - "niagara.ca"
+    - "chpca.ca"
+  
+  provincial_nonprofits:
+    - "alzheimertoronto.org"
+    - "alzheimerquebec.ca"
+    - "alzheimercalgary.ca"
+    - "alzheimer.mb.ca"
+    - "ontariocaregiver.ca"
+    - "ageopportunity.mb.ca"
+  
+  major_news:
+    - "cbc.ca"
+    - "ctvnews.ca"
+    - "globalnews.ca"
+    - "theglobeandmail.com"
+    - "nationalpost.com"
+    - "thestar.com"
+    - "vancouversun.com"
+    - "calgaryherald.com"
+    - "winnipegfreepress.com"
+    - "ottawacitizen.com"
+    - "montrealgazette.com"
+    - "ledevoir.com"
+    - "lapresse.ca"
+  
+  academic:
+    - "mcgill.ca"
+    - "utoronto.ca"
+    - "ubc.ca"
+    - "ualberta.ca"
+    - "umanitoba.ca"
+    - "queensu.ca"
+    - "uvic.ca"
+    - "sfu.ca"
+
+# Tier 3: Blocked - Never use
+blocked_domains:
+  low_trust:
+    - "worldscholarshipforum.com"
+    - "indeed.com"
+    - "glassdoor.com"
+    - "yelp.ca"
+    - "tripadvisor.ca"
+    - "yellowpages.ca"
+  
+  us_medical:
+    - "webmd.com"
+    - "healthline.com"
+    - "mayoclinic.org"
+    - "medicalnewstoday.com"
+    - "verywellhealth.com"
+    - "drugs.com"
+    - "rxlist.com"
+    - "medscape.com"
+    - "everydayhealth.com"
+    - "nih.gov"
+    - "cdc.gov"
+    - "nhs.uk"
+  
+  user_generated:
+    - "wikipedia.org"
+    - "pinterest.com"
+    - "reddit.com"
+    - "facebook.com"
+    - "twitter.com"
+    - "instagram.com"
+    - "youtube.com"
+    - "tiktok.com"
+    - "quora.com"
+  
+  ecommerce:
+    - "amazon.ca"
+    - "walmart.ca"
+    - "canadiantire.ca"
+    - "costco.ca"
+    - "well.ca"
+    - "shoppersdrugmart.ca"
+    - "rexall.ca"
+
+# Query templates for web discovery
+query_templates:
+  default:
+    - "{theme} seniors {city} {province} site:gov site:ca"
+    - "{theme} elderly {city} health authority programs"
+    - "{theme} home care {province} 2024 2025"
+  
+  local_programs:
+    - "{health_authority} {theme} services seniors"
+    - "{city} {theme} programs elderly site:ca"
+    - "{province} government {theme} seniors program"
+  
+  statistics:
+    - "{theme} statistics Canada seniors site:statcan.gc.ca"
+    - "{theme} data {province} elderly site:cihi.ca"
+    - "{province} {theme} seniors statistics 2023 2024"
+
+# Pre-sampled authoritative resources by market
+# Sample these first before random discovery
+priority_resources:
+  montreal:
+    - "https://www.quebec.ca/en/health/health-system-and-services/service-organization/home-support-services"
+    - "https://www.quebec.ca/en/health/finding-a-resource/info-sante-811"
+    - "https://montreal.ca/en/topics/services-seniors"
+  toronto:
+    - "https://www.ontariohealth.ca/our-work/programs/home-and-community-care"
+    - "https://www.ontario.ca/page/homecare-seniors"
+    - "https://www.toronto.ca/community-people/health-wellness-care/health-programs-advice/seniors-health/"
+  vancouver:
+    - "https://www2.gov.bc.ca/gov/content/health/accessing-health-care/home-community-care"
+    - "https://www.healthlinkbc.ca/"
+    - "https://vancouver.ca/people-programs/seniors.aspx"
+  calgary:
+    - "https://www.albertahealthservices.ca/cc/Page15339.aspx"
+    - "https://www.alberta.ca/seniors-and-housing"
+    - "https://www.calgary.ca/social-services/seniors.html"
+  winnipeg:
+    - "https://www.gov.mb.ca/health/homecare/"
+    - "https://wrha.mb.ca/home-care/"
+    - "https://www.ageopportunity.mb.ca/"
+  surrey:
+    - "https://www.fraserhealth.ca/health-topics-a-to-z/home-health"
+    - "https://www2.gov.bc.ca/gov/content/health/accessing-health-care/home-community-care"
+    - "https://www.surrey.ca/parks-recreation/seniors"
+  victoria:
+    - "https://www.islandhealth.ca/our-services/home-community-care-services"
+    - "https://www2.gov.bc.ca/gov/content/health/accessing-health-care/home-community-care"
+    - "https://www.victoria.ca/EN/main/residents/parks/recreation-facilities/seniors-centres.html"
+  oakville:
+    - "https://www.ontariohealth.ca/our-work/programs/home-and-community-care"
+    - "https://www.halton.ca/For-Residents/Community-Resources/Seniors-Programs"
+    - "https://www.ontario.ca/page/ontario-seniors-care-at-home-tax-credit"
+
+# Logging configuration
+logging:
+  log_directory: "logs"
+  research_choices_file: "research_choices-{date}.json"
+  rejected_sources_file: "rejected_sources-{date}.json"
+  log_rejected_sources: true
+  log_chosen_sources: true
+  log_format:
+    chosen:
+      - url
+      - domain
+      - trust_tier
+      - relevance_score
+      - date_accessed
+    rejected:
+      - url
+      - domain
+      - rejection_reason
+      - date_attempted
+
+# Fallback behavior
+fallback:
+  allow_fallback_stats: false
+  require_source_url: true
+  fail_on_no_sources: true
+  min_trusted_sources: 1
+  min_allowed_sources: 1
+
+# Rate limiting for web discovery
+rate_limiting:
+  max_requests_per_minute: 10
+  backoff_on_429: true
+  backoff_seconds: 60
+  max_retries: 3

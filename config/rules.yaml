@@ -1,0 +1,346 @@
+version: "1.0"
+description: "Consolidated QA rules, validation thresholds, and anti-sameness enforcement"
+
+# Editor QA Checks (performed by GPT-4.1)
+editor_checks:
+  # Statistics validation
+  statistics:
+    min_inline_cited_stats: 2
+    require_source_url: true
+    require_year_or_date: true
+    fail_on_unsourced_claims: true
+    check_pattern: "According to|Source:|Research from|data shows|reports that"
+  
+  # Link validation
+  links:
+    min_local_authority_links: 1
+    min_internal_links: 2
+    min_external_links: 2
+    local_authority_types:
+      - "gov.bc.ca"
+      - "gov.mb.ca"
+      - "alberta.ca"
+      - "ontario.ca"
+      - "quebec.ca"
+      - "canada.ca"
+      - ".gc.ca"
+      - "healthlinkbc.ca"
+      - "wrha.mb.ca"
+      - "albertahealthservices.ca"
+    validate_urls: true
+    remove_broken_links: true
+  
+  # FAQ validation
+  faq:
+    required: true
+    min_questions: 5
+    unique_vs_other_markets: 4
+    check_structure: true
+  
+  # Keyword density
+  keyword_density:
+    min_percent: 1.5
+    max_percent: 2.5
+    check_primary_in_h1: true
+    check_in_first_paragraph: true
+  
+  # Meta validation
+  meta:
+    title_max_chars: 60
+    title_no_ellipsis: true
+    title_keyword_early: true
+    description_min_chars: 150
+    description_max_chars: 160
+    description_has_keyword: true
+  
+  # Banned content check
+  banned_content:
+    fail_on_banned_openers: true
+    fail_on_accessed_without_url: true
+    check_anywhere_in_body: true
+    banned_openers:
+      - "Many families"
+      - "As we age"
+      - "In today's world"
+      - "It's no secret that"
+      - "When it comes to"
+      - "There's no doubt that"
+      - "In recent years"
+      - "As we all know"
+      - "For many people"
+      - "It goes without saying"
+      - "In this article"
+      - "Today, we will"
+    banned_phrases:
+      - "accessed on"
+      - "click here"
+      - "read more"
+      - "this article"
+      - "in conclusion"
+  
+  # Rewrite triggers
+  rewrite_triggers:
+    - "similarity_failed"
+    - "missing_stats"
+    - "missing_faq"
+    - "banned_opener_found"
+    - "meta_truncated"
+    - "keyword_density_out_of_range"
+
+# Similarity Gate Configuration
+similarity_gate:
+  # TF-IDF threshold
+  tfidf:
+    threshold: 0.35
+    fail_on_exceed: true
+  
+  # Embedding threshold
+  embedding:
+    threshold: 0.85
+    model: "text-embedding-3-small"
+    fail_on_exceed: true
+  
+  # Structural tokens to include in similarity check
+  structural_tokens:
+    - h2_text
+    - cta_text
+    - first_100_words
+    - hero_alt_text
+    - faq_questions
+  
+  # Fail on similar structures
+  fail_conditions:
+    similar_intros: true
+    similar_ctas: true
+    similar_h2s: true
+    similar_faqs: true
+  
+  # Escalation behavior
+  escalation:
+    max_rewrite_attempts: 2
+    escalate_to_gpt52: true
+    escalation_model: "gpt-5.2"
+
+# Anti-Sameness Rules
+anti_sameness:
+  # H2 uniqueness
+  h2_uniqueness:
+    min_unique_percent: 50
+    require_market_specific_h2: true
+    count_unique_across_run: true
+  
+  # FAQ uniqueness
+  faq_uniqueness:
+    min_unique_questions: 4
+    total_questions: 5
+  
+  # Story lead rotation
+  story_lead:
+    enforce_unique_per_market: true
+    types:
+      scene:
+        description: "Open with a vivid scenario"
+        example: "Picture this: Your mother calls at 3 AM, confused..."
+      question:
+        description: "Open with a compelling question"
+        example: "What happens when your aging parent can no longer..."
+      statistic:
+        description: "Open with a surprising statistic"
+        example: "Only 15% of Canadian seniors have a formal care plan..."
+  
+  # Keyword uniqueness
+  keywords:
+    no_duplicate_primary_in_run: true
+    secondary_must_differ_50_percent: true
+
+# Link Count Requirements
+link_requirements:
+  internal:
+    min_count: 2
+    max_count: 4
+    must_include:
+      - location_page
+      - service_page
+    location_page_priority: true
+  
+  external:
+    min_count: 2
+    max_count: 5
+    must_be_authoritative: true
+    prefer_provincial: true
+  
+  resource_links:
+    placement: "inline"
+    no_detached_blocks: true
+    weave_into_body: true
+
+# Image Uniqueness Rules
+image_rules:
+  unique_per_market: true
+  unique_per_run: true
+  track_used_ids: true
+  used_images_file: "data/used_images.json"
+  
+  query_requirements:
+    must_include_city: true
+    must_include_theme: true
+  
+  alt_text:
+    unique_per_market: true
+    must_include_city: true
+    max_length: 125
+  
+  fallback_queries:
+    by_province:
+      ontario:
+        - "senior care Toronto winter"
+        - "elderly home safety Ontario"
+        - "aging in place Canada"
+      quebec:
+        - "senior care Montreal"
+        - "elderly home safety Quebec"
+        - "aging in place Canada winter"
+      british_columbia:
+        - "senior care Vancouver"
+        - "elderly home safety BC"
+        - "Pacific Northwest senior"
+      alberta:
+        - "senior care Calgary"
+        - "elderly home safety Alberta"
+        - "Rocky Mountains senior"
+      manitoba:
+        - "senior care Winnipeg"
+        - "elderly home safety Manitoba"
+        - "Canadian prairie senior"
+
+# Meta Rules
+meta_rules:
+  title:
+    max_chars: 60
+    no_ellipsis: true
+    keyword_position: "early"
+    include_city: true
+  
+  description:
+    min_chars: 150
+    max_chars: 160
+    include_keyword: true
+    include_cta_hint: true
+    no_truncation: true
+
+# CTA and Service Page Mapping
+cta_mapping:
+  # Theme to service page
+  theme_to_service:
+    dementia_awareness: "dementia-and-alzheimers-care"
+    winter_safety: "hospital-to-home"
+    winter_isolation: "companion-care"
+    hospital_to_home: "hospital-to-home"
+    heart_health: "heart-health-care"
+    parkinsons_awareness: "parkinsons-care"
+    stroke_awareness: "stroke-recovery-care"
+    palliative_care: "end-of-life-care"
+    valentines_companionship: "companion-care"
+    tax_season_prep: "getting-started"
+    spring_preparation: "getting-started"
+    new_year_care_planning: "getting-started"
+  
+  # CTA priority
+  cta_priority:
+    - location_page
+    - theme_service_page
+    - getting_started
+  
+  # CTA text must include city
+  cta_includes_city: true
+
+# Run-Time Quality Report
+quality_report:
+  generate: true
+  output_file: "logs/quality_report-{date}.json"
+  
+  metrics:
+    - word_count
+    - local_link_count
+    - cited_stat_count
+    - internal_link_count
+    - external_link_count
+    - faq_present
+    - faq_question_count
+    - meta_title_length
+    - meta_description_length
+    - keyword_density
+    - unique_image_check
+    - h2_uniqueness_percent
+    - story_lead_type
+    - banned_opener_check
+  
+  thresholds:
+    min_word_count: 1000
+    max_word_count: 1400
+    min_local_links: 1
+    min_cited_stats: 2
+    min_internal_links: 2
+    min_external_links: 2
+    faq_required: true
+    faq_min_questions: 5
+    meta_title_max: 60
+    meta_desc_min: 150
+    meta_desc_max: 160
+    keyword_density_min: 1.5
+    keyword_density_max: 2.5
+    h2_unique_min: 50
+  
+  fail_run_if_below: true
+  alert_on_failure: true
+
+# Linter Configuration
+linter:
+  # Run on every article
+  auto_run: true
+  
+  # Checks to perform
+  checks:
+    - banned_openers
+    - banned_phrases
+    - keyword_density
+    - link_counts
+    - faq_presence
+    - meta_length
+    - h2_count
+    - word_count
+    - canadian_spelling
+    - source_attribution
+  
+  # Severity levels
+  severity:
+    banned_opener: "error"
+    missing_faq: "error"
+    missing_stats: "error"
+    low_keyword_density: "warning"
+    high_keyword_density: "warning"
+    meta_too_long: "error"
+    meta_too_short: "warning"
+    us_spelling: "warning"
+    missing_local_link: "warning"
+
+# Escalation Rules
+escalation:
+  # When to escalate to GPT-5.2
+  triggers:
+    - "similarity_failed_after_2_rewrites"
+    - "major_compliance_issues"
+    - "editorial_score_below_7"
+  
+  # Escalation behavior
+  behavior:
+    model: "gpt-5.2"
+    max_tokens: 6500
+    temperature: 0.5
+    max_attempts: 1
+  
+  # If escalation fails
+  on_failure:
+    log_failure: true
+    skip_market: false
+    retry_next_run: true

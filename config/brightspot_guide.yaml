@@ -1,0 +1,124 @@
+version: "2.0"
+
+html_requirements:
+  comment_start: "<!-- Brightspot Content Block: {TITLE} -->"
+  wrapper_class: "blog-content-module"
+  units: "px only (no rem, em, %, vw, vh)"
+  approach: "inline_styles_for_simple_articles"
+  scoped_css_for_complex: true
+
+required_elements:
+  - h1_with_keyword
+  - deck_subheadline
+  - skimmable_h2s
+  - bullet_lists
+  - callout_box_light_gold
+  - local_resources_section
+  - dark_cta_box_with_button
+  - medical_disclaimer
+  - hero_image_placeholder
+
+optional_elements:
+  - faq_section
+
+cta_link: https://thekey.ca/getting-started
+placeholder_image: https://cdn.brightspot.com/placeholder.jpg
+image_todo: "<!-- TODO: Upload image to Brightspot and replace URL -->"
+image_cdn_base: "https://thekey.brightspotcdn.com/"
+
+css_rules:
+  scoped: true
+  unique_class_prefix: true
+  selector_prefix: "bs-{market}-"
+  allowed_properties: "px-based sizing, colors, spacing"
+  use_important_when_needed: true
+  box_sizing: "border-box for all elements"
+
+color_palette:
+  everest: "#06262D"
+  gold: "#D1B886"
+  light_gold: "#F0EEDC"
+  cream: "#F6F4E8"
+  white: "#FFFFFF"
+  muted_text: "#475569"
+  gray_border: "#e5e7eb"
+
+html_patterns:
+  hero_image: |
+    <div style="margin-bottom: 2rem;">
+        <img src="{image_url}" 
+             alt="{alt_text}" 
+             style="width: 100%; height: auto; border-radius: 8px; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);">
+    </div>
+  
+  deck_subheadline: |
+    <p style="font-size: 20px; line-height: 28px; color: #475569; font-weight: 500; margin-top: -0.5rem; margin-bottom: 2rem;">
+        {subheadline_text}
+    </p>
+  
+  callout_box: |
+    <div style="background-color: #F0EEDC; padding: 24px; border-left: 4px solid #D1B886; margin: 24px 0;">
+        <h3 style="margin-top:0; color: #06262D;">{callout_title}</h3>
+        <p style="margin-bottom:0;">{callout_content}</p>
+    </div>
+  
+  cta_box: |
+    <div style="background-color: #06262D; color: white; padding: 32px; border-radius: 8px; margin-top: 32px; text-align: center;">
+        <h3 style="color: white; margin-top: 0;">{cta_title}</h3>
+        <p style="color: #e5e7eb;">{cta_supporting_text}</p>
+        <a href="{cta_link}" style="display: inline-block; background-color: #D1B886; color: #06262D; font-weight: bold; padding: 12px 24px; border-radius: 4px; text-decoration: none; margin-top: 16px;">{button_text}</a>
+    </div>
+  
+  hr_divider: |
+    <hr style="border-top: 1px solid #e5e7eb; margin: 32px 0;">
+  
+  link: |
+    <a href="{url}" style="color: #06262D; text-decoration: underline; font-weight: 600;">{link_text}</a>
+
+typography:
+  h1:
+    font_family: "'Times New Roman', serif"
+    font_size: "36px"
+    color: "#06262D"
+    margin_bottom: "10px"
+  h2:
+    font_family: "'Times New Roman', serif"
+    font_size: "24px"
+    color: "#06262D"
+    margin_top: "30px"
+    margin_bottom: "16px"
+  h3:
+    font_size: "20px"
+    color: "#06262D"
+    margin_top: "24px"
+    margin_bottom: "12px"
+  body:
+    font_family: "'Helvetica Neue', Helvetica, Arial, sans-serif"
+    font_size: "16px"
+    line_height: "1.6"
+    color: "#333"
+    margin_bottom: "16px"
+
+validation_rules:
+  wrapper_required: true
+  px_only: true
+  scoped_css: true
+  cta_link_required: true
+  disclaimer_required: true
+  faq_count: 0  # Now optional, 0-5 allowed
+  hero_image_required: true
+  deck_subheadline_required: true
+  local_resources_required: true
+  h2_min_count: 6
+  h2_max_count: 8
+  internal_links_min: 2
+  internal_links_max: 4
+
+common_mistakes_to_avoid:
+  - "Using rem/em units instead of px"
+  - "Unscoped CSS that leaks to Brightspot"
+  - "Relative image paths instead of Brightspot CDN URLs"
+  - "Missing alt text on images"
+  - "Forgetting the blog-content-module wrapper class"
+  - "Not using !important when Brightspot CSS overrides"
+  - "Generic class names without unique prefixes"

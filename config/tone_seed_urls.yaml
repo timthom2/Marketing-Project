@@ -1,0 +1,16 @@
+version: "1.1"
+
+gold_standard_urls:
+  - https://thekey.com/learning-center/learning-for-families
+  - https://thekey.com/learning-center/dementia-care-guide
+  - https://thekey.com/learning-center/hospital-to-home-transition
+  - https://thekey.com/learning-center/parkinsons-care-tips
+  - https://thekey.com/learning-center/stroke-recovery-support
+  - https://thekey.com/learning-center/end-of-life-care
+  - https://thekey.com/learning-center/elderly-safety-home
+  - https://thekey.com/learning-center/companion-care-benefits
+  - https://thekey.com/learning-center/choosing-home-care-provider
+
+fresh_fetch_count: 3
+learning_center_base: https://thekey.com/learning-center
+cache_ttl_days: 14

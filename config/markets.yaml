@@ -1,0 +1,844 @@
+version: "3.0"
+rotation_start_date: "2026-01-06"
+
+markets:
+  montreal:
+    name: Montreal
+    province: Quebec
+    location_url: https://thekey.ca/locations/canada/montreal
+    health_authority: "CIUSSS du Centre-Sud-de-l'Île-de-Montréal"
+    
+    primary_keyword_pool:
+      - "home care Montreal"
+      - "Montreal elderly care services"
+      - "Montreal senior assistance"
+      - "Quebec home care support"
+      - "CLSC home care Montreal"
+      - "Montreal aging in place"
+    
+    secondary_keyword_pool:
+      - "Montreal dementia care"
+      - "Montreal post-hospital care"
+      - "Montreal palliative care"
+      - "elderly care services Montreal"
+      - "Montreal companion care"
+      - "Montreal Alzheimer's care"
+      - "RAMQ home care coverage"
+      - "Westmount senior care"
+      - "NDG elderly care"
+      - "Plateau senior assistance"
+    
+    local_domains:
+      - "montreal.ca"
+      - "quebec.ca"
+      - "santemontreal.qc.ca"
+      - "ciussssodimtl.qc.ca"
+      - "ramq.gouv.qc.ca"
+    
+    banned_domains:
+      - "worldscholarshipforum.com"
+      - "indeed.com"
+      - "glassdoor.com"
+      - "yelp.ca"
+    
+    healthcare_context: |
+      Montreal residents access home care through Quebec's CLSC network (Centres locaux de services communautaires).
+      The RAMQ (Régie de l'assurance maladie du Québec) provides public health insurance coverage.
+
+    authoritative_programs:
+      - name: "Info-Santé 811"
+        url: "https://www.quebec.ca/en/health/finding-a-resource/info-sante-811"
+        summary: "Free 24/7 health consultation line staffed by nurses"
+        accessed: "2025-12-15"
+      - name: "Programme de soutien à domicile (Home Support Program)"
+        url: "https://www.quebec.ca/en/health/health-system-and-services/service-organization/home-support-services"
+        summary: "Quebec government home support services for seniors and disabled"
+        accessed: "2025-12-15"
+      - name: "CLSC Locator"
+        url: "https://www.msss.gouv.qc.ca/repertoires/clsc/"
+        summary: "Find your local CLSC for home care assessments and services"
+        accessed: "2025-12-15"
+      - name: "Fédération québécoise des Sociétés Alzheimer"
+        url: "https://www.alzheimerquebec.ca/"
+        summary: "Provincial Alzheimer's support, education, and caregiver resources"
+        accessed: "2025-12-15"
+    
+    local_stats:
+      - stat: "Over 200,000 seniors in Montreal receive some form of home care services annually"
+        source: "Ministère de la Santé et des Services sociaux du Québec"
+        year: 2023
+      - stat: "Quebec invests over $3 billion annually in home care services"
+        source: "Quebec Budget 2023-2024"
+        year: 2023
+    
+    h2_seeds:
+      - "How Montreal's CLSC Network Supports Aging at Home"
+      - "Understanding RAMQ Coverage for Home Care in Montreal"
+      - "Navigating Quebec's Soutien à Domicile Program"
+    
+    must_include_entities:
+      - "CLSC"
+      - "RAMQ"
+      - "Info-Santé 811"
+      - "Quebec"
+      - "Montreal"
+    
+    local_resources:
+      - anchor: "Montreal CLSC home care services"
+        url: "https://www.quebec.ca/en/health/health-system-and-services/service-organization/home-support-services"
+      - anchor: "Quebec Info-Santé 811 health line"
+        url: "https://www.quebec.ca/en/health/finding-a-resource/info-sante-811"
+      - anchor: "RAMQ public health insurance"
+        url: "https://www.ramq.gouv.qc.ca/en/citizens/health-insurance"
+      - anchor: "Montreal seniors' community programs"
+        url: "https://montreal.ca/en/topics/services-seniors"
+      - anchor: "Quebec home care tax credits"
+        url: "https://www.revenuquebec.ca/en/citizens/tax-credits/tax-credit-for-home-support-services-for-seniors/"
+    
+    cta_templates:
+      getting_started: "Talk to a Montreal care expert about your home care options"
+      dementia: "Learn about specialized dementia care in Montreal"
+      hospital_to_home: "Get Montreal hospital-to-home transition support"
+      companion_care: "Discover companionship care services in Montreal"
+    
+    anchor_text_variants:
+      - "home care in Montreal"
+      - "Montreal senior care services"
+      - "elderly care Montreal"
+      - "in-home care Montreal"
+
+  toronto:
+    name: Toronto
+    province: Ontario
+    location_url: https://thekey.ca/locations/canada/toronto
+    health_authority: "Ontario Health Toronto Region"
+    
+    primary_keyword_pool:
+      - "home care Toronto"
+      - "Toronto elderly care services"
+      - "Toronto senior assistance"
+      - "GTA home care support"
+      - "Ontario home care Toronto"
+      - "Toronto aging in place"
+    
+    secondary_keyword_pool:
+      - "Toronto dementia care"
+      - "Toronto post-hospital care"
+      - "Toronto palliative care"
+      - "elderly care services Toronto"
+      - "Toronto companion care"
+      - "Toronto Alzheimer's care"
+      - "OHIP home care coverage"
+      - "Scarborough senior care"
+      - "North York elderly care"
+      - "Etobicoke home care"
+    
+    local_domains:
+      - "toronto.ca"
+      - "ontario.ca"
+      - "ontariocaregiver.ca"
+      - "healthcareathome.ca"
+    
+    banned_domains:
+      - "worldscholarshipforum.com"
+      - "indeed.com"
+      - "glassdoor.com"
+      - "yelp.ca"
+    
+    healthcare_context: |
+      Toronto residents access home care through Ontario Health's Home and Community Care Support Services.
+      OHIP provides public health insurance. The Ontario Seniors Care at Home Tax Credit offers financial support.
+    
+    authoritative_programs:
+      - name: "Ontario Health - Home and Community Care"
+        url: "https://www.ontariohealth.ca/our-work/programs/home-and-community-care"
+        summary: "Provincial coordination of home care services for Ontario residents"
+        accessed: "2025-12-15"
+      - name: "Ontario Seniors Care at Home Tax Credit"
+        url: "https://www.ontario.ca/page/ontario-seniors-care-at-home-tax-credit"
+        summary: "Refundable tax credit up to $1,500 for medical expenses for seniors 70+"
+        accessed: "2025-12-15"
+      - name: "Alzheimer Society of Toronto"
+        url: "https://alzheimertoronto.org/"
+        summary: "Local dementia support, education, and caregiver resources"
+        accessed: "2025-12-15"
+      - name: "Ontario Caregiver Organization"
+        url: "https://ontariocaregiver.ca/"
+        summary: "Support and resources for family caregivers across Ontario"
+        accessed: "2025-12-15"
+    
+    local_stats:
+      - stat: "Over 700,000 Ontarians receive publicly funded home care annually"
+        source: "Ontario Health"
+        year: 2023
+      - stat: "Ontario invests $5.2 billion annually in home and community care"
+        source: "Ontario Budget 2023-2024"
+        year: 2023
+    
+    h2_seeds:
+      - "How Ontario Health Coordinates Home Care in Toronto"
+      - "Understanding OHIP Coverage for Senior Care Services"
+      - "Maximizing the Ontario Seniors Care at Home Tax Credit"
+    
+    must_include_entities:
+      - "OHIP"
+      - "Ontario Health"
+      - "Home and Community Care"
+      - "Ontario"
+      - "Toronto"
+    
+    local_resources:
+      - anchor: "Ontario Home and Community Care services"
+        url: "https://www.ontario.ca/page/homecare-seniors"
+      - anchor: "Ontario Seniors Care at Home Tax Credit"
+        url: "https://www.ontario.ca/page/ontario-seniors-care-at-home-tax-credit"
+      - anchor: "Alzheimer Society of Toronto"
+        url: "https://alzheimertoronto.org/"
+      - anchor: "Ontario Caregiver Organization"
+        url: "https://ontariocaregiver.ca/"
+      - anchor: "Toronto seniors services"
+        url: "https://www.toronto.ca/community-people/health-wellness-care/health-programs-advice/seniors-health/"
+    
+    cta_templates:
+      getting_started: "Talk to a Toronto care expert about your home care options"
+      dementia: "Learn about specialized dementia care in Toronto"
+      hospital_to_home: "Get Toronto hospital-to-home transition support"
+      companion_care: "Discover companionship care services in the GTA"
+    
+    anchor_text_variants:
+      - "home care in Toronto"
+      - "Toronto senior care services"
+      - "GTA elderly care"
+      - "in-home care Toronto"
+
+  vancouver:
+    name: Vancouver
+    province: British Columbia
+    location_url: https://thekey.ca/locations/canada/vancouver
+    health_authority: "Vancouver Coastal Health"
+    
+    primary_keyword_pool:
+      - "home care Vancouver"
+      - "Vancouver elderly care services"
+      - "BC home care support"
+      - "Vancouver senior assistance"
+      - "VCH home care"
+      - "Vancouver aging in place"
+    
+    secondary_keyword_pool:
+      - "Vancouver dementia care"
+      - "Vancouver post-hospital care"
+      - "Vancouver palliative care"
+      - "elderly care services Vancouver"
+      - "Vancouver companion care"
+      - "Vancouver Alzheimer's care"
+      - "CSIL program Vancouver"
+      - "West Vancouver senior care"
+      - "Kitsilano elderly care"
+    
+    local_domains:
+      - "vancouver.ca"
+      - "gov.bc.ca"
+      - "healthlinkbc.ca"
+      - "vch.ca"
+    
+    banned_domains:
+      - "worldscholarshipforum.com"
+      - "indeed.com"
+      - "glassdoor.com"
+      - "yelp.ca"
+    
+    healthcare_context: |
+      Vancouver residents access home care through Vancouver Coastal Health (VCH).
+      BC's Medical Services Plan (MSP) provides public health insurance. CSIL allows clients to self-direct care.
+    
+    authoritative_programs:
+      - name: "BC Home and Community Care"
+        url: "https://www2.gov.bc.ca/gov/content/health/accessing-health-care/home-community-care"
+        summary: "Provincial home care program for BC residents"
+        accessed: "2025-12-15"
+      - name: "Choice in Supports for Independent Living (CSIL)"
+        url: "https://www2.gov.bc.ca/gov/content/health/accessing-health-care/home-community-care/care-options-and-டcost/choice-in-supports-for-independent-living"
+        summary: "Self-directed care program allowing clients to hire their own caregivers"
+        accessed: "2025-12-15"
+      - name: "HealthLink BC"
+        url: "https://www.healthlinkbc.ca/"
+        summary: "24/7 health information and advice line (8-1-1)"
+        accessed: "2025-12-15"
+      - name: "BC Seniors' Guide"
+        url: "https://www2.gov.bc.ca/gov/content/family-social-supports/seniors"
+        summary: "Comprehensive resource for BC seniors programs and services"
+        accessed: "2025-12-15"
+    
+    local_stats:
+      - stat: "BC spends over $2.8 billion annually on home and community care"
+        source: "BC Ministry of Health"
+        year: 2023
+      - stat: "Over 100,000 BC seniors receive publicly funded home care services"
+        source: "BC Patient Safety & Quality Council"
+        year: 2023
+    
+    h2_seeds:
+      - "How Vancouver Coastal Health Delivers Home Care to Downtown and West Side Families"
+      - "Understanding VCH's Unique Approach to Urban Senior Care"
+      - "Why Vancouver's Diverse Communities Need Culturally Sensitive Home Care"
+      - "Navigating Multilingual Senior Services in Metro Vancouver"
+    
+    must_include_entities:
+      - "Vancouver Coastal Health"
+      - "VCH"
+      - "Downtown Vancouver"
+      - "West Side"
+      - "metro Vancouver"
+    
+    local_resources:
+      - anchor: "BC Home and Community Care"
+        url: "https://www2.gov.bc.ca/gov/content/health/accessing-health-care/home-community-care"
+      - anchor: "HealthLink BC 8-1-1"
+        url: "https://www.healthlinkbc.ca/"
+      - anchor: "BC Seniors' Guide"
+        url: "https://www2.gov.bc.ca/gov/content/family-social-supports/seniors"
+      - anchor: "Vancouver seniors services"
+        url: "https://vancouver.ca/people-programs/seniors.aspx"
+      - anchor: "BC CSIL self-directed care"
+        url: "https://www2.gov.bc.ca/gov/content/health/accessing-health-care/home-community-care/care-options-and-cost/choice-in-supports-for-independent-living"
+    
+    cta_templates:
+      getting_started: "Talk to a Vancouver care expert about your home care options"
+      dementia: "Learn about specialized dementia care in Vancouver"
+      hospital_to_home: "Get Vancouver hospital-to-home transition support"
+      companion_care: "Discover companionship care services in Vancouver"
+    
+    anchor_text_variants:
+      - "home care in Vancouver"
+      - "Vancouver senior care services"
+      - "BC elderly care"
+      - "in-home care Vancouver"
+
+  winnipeg:
+    name: Winnipeg
+    province: Manitoba
+    location_url: https://thekey.ca/locations/canada/winnipeg
+    health_authority: "Winnipeg Regional Health Authority (WRHA)"
+    
+    primary_keyword_pool:
+      - "home care Winnipeg"
+      - "Winnipeg elderly care services"
+      - "Manitoba home care support"
+      - "Winnipeg senior assistance"
+      - "WRHA home care"
+      - "Winnipeg aging in place"
+    
+    secondary_keyword_pool:
+      - "Winnipeg dementia care"
+      - "Winnipeg post-hospital care"
+      - "Winnipeg palliative care"
+      - "elderly care services Winnipeg"
+      - "Winnipeg companion care"
+      - "Winnipeg Alzheimer's care"
+      - "Manitoba Home Care Program"
+      - "River Heights senior care"
+      - "St. Vital elderly care"
+    
+    local_domains:
+      - "winnipeg.ca"
+      - "gov.mb.ca"
+      - "wrha.mb.ca"
+      - "alzheimer.mb.ca"
+    
+    banned_domains:
+      - "worldscholarshipforum.com"
+      - "indeed.com"
+      - "glassdoor.com"
+      - "yelp.ca"
+    
+    healthcare_context: |
+      Winnipeg residents access home care through the WRHA and Manitoba Home Care Program.
+      Manitoba Health provides public health insurance coverage.
+    
+    authoritative_programs:
+      - name: "Manitoba Home Care Program"
+        url: "https://www.gov.mb.ca/health/homecare/"
+        summary: "Provincial home care services for Manitobans"
+        accessed: "2025-12-15"
+      - name: "WRHA Home Care Services"
+        url: "https://wrha.mb.ca/home-care/"
+        summary: "Winnipeg regional home care coordination and services"
+        accessed: "2025-12-15"
+      - name: "Age & Opportunity"
+        url: "https://www.ageopportunity.mb.ca/"
+        summary: "Senior services organization providing programs and support"
+        accessed: "2025-12-15"
+      - name: "Alzheimer Society of Manitoba"
+        url: "https://alzheimer.mb.ca/"
+        summary: "Provincial dementia support and caregiver resources"
+        accessed: "2025-12-15"
+    
+    local_stats:
+      - stat: "Over 30,000 Manitobans receive home care services annually"
+        source: "Manitoba Health"
+        year: 2023
+      - stat: "Manitoba invests $350 million annually in home care"
+        source: "Manitoba Budget 2023-2024"
+        year: 2023
+    
+    h2_seeds:
+      - "How the WRHA Delivers Home Care in Winnipeg"
+      - "Understanding Manitoba's Home Care Program Benefits"
+      - "Navigating Senior Services in Winnipeg"
+    
+    must_include_entities:
+      - "WRHA"
+      - "Manitoba Home Care Program"
+      - "Age & Opportunity"
+      - "Manitoba"
+      - "Winnipeg"
+    
+    local_resources:
+      - anchor: "Manitoba Home Care Program"
+        url: "https://www.gov.mb.ca/health/homecare/"
+      - anchor: "WRHA home care services"
+        url: "https://wrha.mb.ca/home-care/"
+      - anchor: "Age & Opportunity senior services"
+        url: "https://www.ageopportunity.mb.ca/"
+      - anchor: "Alzheimer Society of Manitoba"
+        url: "https://alzheimer.mb.ca/"
+      - anchor: "Winnipeg seniors resources"
+        url: "https://winnipeg.ca/interhom/seniors/"
+    
+    cta_templates:
+      getting_started: "Talk to a Winnipeg care expert about your home care options"
+      dementia: "Learn about specialized dementia care in Winnipeg"
+      hospital_to_home: "Get Winnipeg hospital-to-home transition support"
+      companion_care: "Discover companionship care services in Winnipeg"
+    
+    anchor_text_variants:
+      - "home care in Winnipeg"
+      - "Winnipeg senior care services"
+      - "Manitoba elderly care"
+      - "in-home care Winnipeg"
+
+  calgary:
+    name: Calgary
+    province: Alberta
+    location_url: https://thekey.ca/locations/canada/calgary
+    health_authority: "Alberta Health Services (AHS)"
+    
+    primary_keyword_pool:
+      - "home care Calgary"
+      - "Calgary elderly care services"
+      - "Alberta home care support"
+      - "Calgary senior assistance"
+      - "AHS home care Calgary"
+      - "Calgary aging in place"
+    
+    secondary_keyword_pool:
+      - "Calgary dementia care"
+      - "Calgary post-hospital care"
+      - "Calgary palliative care"
+      - "elderly care services Calgary"
+      - "Calgary companion care"
+      - "Calgary Alzheimer's care"
+      - "AHS Continuing Care"
+      - "SW Calgary senior care"
+      - "NW Calgary elderly care"
+    
+    local_domains:
+      - "calgary.ca"
+      - "alberta.ca"
+      - "albertahealthservices.ca"
+      - "alzheimer.ab.ca"
+    
+    banned_domains:
+      - "worldscholarshipforum.com"
+      - "indeed.com"
+      - "glassdoor.com"
+      - "yelp.ca"
+    
+    healthcare_context: |
+      Calgary residents access home care through Alberta Health Services (AHS) Continuing Care.
+      Alberta Health Care Insurance Plan (AHCIP) provides public health insurance coverage.
+    
+    authoritative_programs:
+      - name: "AHS Continuing Care"
+        url: "https://www.albertahealthservices.ca/cc/Page15339.aspx"
+        summary: "Provincial continuing care and home care services"
+        accessed: "2025-12-15"
+      - name: "AHS Seniors Health"
+        url: "https://www.albertahealthservices.ca/topics/Page16951.aspx"
+        summary: "Specialized health services for Alberta seniors"
+        accessed: "2025-12-15"
+      - name: "Alzheimer Society of Calgary"
+        url: "https://www.alzheimercalgary.ca/"
+        summary: "Local dementia support, education, and caregiver resources"
+        accessed: "2025-12-15"
+      - name: "Alberta Seniors and Housing"
+        url: "https://www.alberta.ca/seniors-and-housing"
+        summary: "Provincial programs and services for Alberta seniors"
+        accessed: "2025-12-15"
+    
+    local_stats:
+      - stat: "Over 80,000 Albertans receive AHS home care services annually"
+        source: "Alberta Health Services"
+        year: 2023
+      - stat: "Alberta invests $1.6 billion annually in continuing care"
+        source: "Alberta Budget 2023-2024"
+        year: 2023
+    
+    h2_seeds:
+      - "How AHS Delivers Home Care in Calgary"
+      - "Understanding Alberta's Continuing Care Connection"
+      - "Navigating Senior Services in Calgary"
+    
+    must_include_entities:
+      - "AHS"
+      - "Alberta Health Services"
+      - "Continuing Care"
+      - "Alberta"
+      - "Calgary"
+    
+    local_resources:
+      - anchor: "AHS Continuing Care"
+        url: "https://www.albertahealthservices.ca/cc/Page15339.aspx"
+      - anchor: "Alberta Seniors and Housing"
+        url: "https://www.alberta.ca/seniors-and-housing"
+      - anchor: "Alzheimer Society of Calgary"
+        url: "https://www.alzheimercalgary.ca/"
+      - anchor: "Calgary seniors services"
+        url: "https://www.calgary.ca/social-services/seniors.html"
+      - anchor: "AHS Health Link 811"
+        url: "https://www.albertahealthservices.ca/assets/info/Page12630.aspx"
+    
+    cta_templates:
+      getting_started: "Talk to a Calgary care expert about your home care options"
+      dementia: "Learn about specialized dementia care in Calgary"
+      hospital_to_home: "Get Calgary hospital-to-home transition support"
+      companion_care: "Discover companionship care services in Calgary"
+    
+    anchor_text_variants:
+      - "home care in Calgary"
+      - "Calgary senior care services"
+      - "Alberta elderly care"
+      - "in-home care Calgary"
+
+  surrey:
+    name: Surrey
+    province: British Columbia
+    location_url: https://thekey.ca/locations/canada/surrey
+    health_authority: "Fraser Health Authority"
+    
+    primary_keyword_pool:
+      - "home care Surrey"
+      - "Surrey elderly care services"
+      - "Fraser Health home care"
+      - "Surrey senior assistance"
+      - "BC home care Surrey"
+      - "Surrey aging in place"
+    
+    secondary_keyword_pool:
+      - "Surrey dementia care"
+      - "Surrey post-hospital care"
+      - "Surrey palliative care"
+      - "elderly care services Surrey"
+      - "Surrey companion care"
+      - "Surrey Alzheimer's care"
+      - "Fraser Health CSIL"
+      - "South Surrey senior care"
+      - "Newton elderly care"
+    
+    local_domains:
+      - "surrey.ca"
+      - "gov.bc.ca"
+      - "fraserhealth.ca"
+      - "healthlinkbc.ca"
+    
+    banned_domains:
+      - "worldscholarshipforum.com"
+      - "indeed.com"
+      - "glassdoor.com"
+      - "yelp.ca"
+    
+    healthcare_context: |
+      Surrey residents access home care through Fraser Health Authority.
+      BC's Medical Services Plan (MSP) provides public health insurance. CSIL allows self-directed care.
+    
+    authoritative_programs:
+      - name: "Fraser Health Home Health"
+        url: "https://www.fraserhealth.ca/health-topics-a-to-z/home-health"
+        summary: "Fraser Health home care services for Surrey and region"
+        accessed: "2025-12-15"
+      - name: "BC Home and Community Care"
+        url: "https://www2.gov.bc.ca/gov/content/health/accessing-health-care/home-community-care"
+        summary: "Provincial home care program for BC residents"
+        accessed: "2025-12-15"
+      - name: "Alzheimer Society of BC"
+        url: "https://alzheimer.ca/bc/"
+        summary: "Provincial dementia support and caregiver resources"
+        accessed: "2025-12-15"
+    
+    local_stats:
+      - stat: "Fraser Health serves over 1.9 million residents across 12 municipalities"
+        source: "Fraser Health Authority"
+        year: 2023
+      - stat: "Surrey is BC's second-largest city with a rapidly growing senior population"
+        source: "City of Surrey"
+        year: 2023
+    
+    h2_seeds:
+      - "How Fraser Health Supports Surrey's Rapidly Growing Senior Population"
+      - "Home Care in Newton, Fleetwood, and South Surrey: What Families Need to Know"
+      - "Why Surrey Families Are Choosing Private Home Care Over Waitlists"
+      - "Surrey's Multicultural Approach to Elder Care: Language and Cultural Matching"
+    
+    must_include_entities:
+      - "Fraser Health"
+      - "Newton"
+      - "South Surrey"
+      - "Fleetwood"
+      - "BC's fastest-growing city"
+    
+    local_resources:
+      - anchor: "Fraser Health home care"
+        url: "https://www.fraserhealth.ca/health-topics-a-to-z/home-health"
+      - anchor: "BC Home and Community Care"
+        url: "https://www2.gov.bc.ca/gov/content/health/accessing-health-care/home-community-care"
+      - anchor: "HealthLink BC 8-1-1"
+        url: "https://www.healthlinkbc.ca/"
+      - anchor: "Surrey seniors services"
+        url: "https://www.surrey.ca/parks-recreation/seniors"
+    
+    cta_templates:
+      getting_started: "Talk to a Surrey care expert about your home care options"
+      dementia: "Learn about specialized dementia care in Surrey"
+      hospital_to_home: "Get Surrey hospital-to-home transition support"
+      companion_care: "Discover companionship care services in Surrey"
+    
+    anchor_text_variants:
+      - "home care in Surrey"
+      - "Surrey senior care services"
+      - "Fraser Valley elderly care"
+      - "in-home care Surrey"
+
+  victoria:
+    name: Victoria
+    province: British Columbia
+    location_url: https://thekey.ca/locations/canada/victoria
+    health_authority: "Island Health"
+    
+    primary_keyword_pool:
+      - "home care Victoria"
+      - "Victoria elderly care services"
+      - "Island Health home care"
+      - "Victoria senior assistance"
+      - "BC home care Victoria"
+      - "Victoria aging in place"
+    
+    secondary_keyword_pool:
+      - "Victoria dementia care"
+      - "Victoria post-hospital care"
+      - "Victoria palliative care"
+      - "elderly care services Victoria"
+      - "Victoria companion care"
+      - "Victoria Alzheimer's care"
+      - "Island Health CSIL"
+      - "Oak Bay senior care"
+      - "Saanich elderly care"
+    
+    local_domains:
+      - "victoria.ca"
+      - "gov.bc.ca"
+      - "islandhealth.ca"
+      - "healthlinkbc.ca"
+    
+    banned_domains:
+      - "worldscholarshipforum.com"
+      - "indeed.com"
+      - "glassdoor.com"
+      - "yelp.ca"
+    
+    healthcare_context: |
+      Victoria residents access home care through Island Health.
+      BC's Medical Services Plan (MSP) provides public health insurance. CSIL allows self-directed care.
+    
+    authoritative_programs:
+      - name: "Island Health Home and Community Care"
+        url: "https://www.islandhealth.ca/our-services/home-community-care-services"
+        summary: "Island Health home care services for Victoria and Vancouver Island"
+        accessed: "2025-12-15"
+      - name: "BC Home and Community Care"
+        url: "https://www2.gov.bc.ca/gov/content/health/accessing-health-care/home-community-care"
+        summary: "Provincial home care program for BC residents"
+        accessed: "2025-12-15"
+      - name: "Alzheimer Society of BC - Victoria"
+        url: "https://alzheimer.ca/bc/"
+        summary: "Provincial dementia support and caregiver resources"
+        accessed: "2025-12-15"
+    
+    local_stats:
+      - stat: "Island Health serves over 850,000 residents across Vancouver Island"
+        source: "Island Health Authority"
+        year: 2023
+      - stat: "Victoria has one of Canada's highest concentrations of seniors"
+        source: "Statistics Canada"
+        year: 2021
+    
+    h2_seeds:
+      - "How Island Health Serves Victoria's High Concentration of Retirees"
+      - "Home Care in Oak Bay, Saanich, and Esquimalt: A Local Guide"
+      - "Why Victoria Attracts Seniors—and What That Means for Care Options"
+      - "Navigating Vancouver Island's Unique Rural and Urban Care Landscape"
+    
+    must_include_entities:
+      - "Island Health"
+      - "Oak Bay"
+      - "Saanich"
+      - "Vancouver Island"
+      - "Canada's retirement capital"
+    
+    local_resources:
+      - anchor: "Island Health home care"
+        url: "https://www.islandhealth.ca/our-services/home-community-care-services"
+      - anchor: "BC Home and Community Care"
+        url: "https://www2.gov.bc.ca/gov/content/health/accessing-health-care/home-community-care"
+      - anchor: "HealthLink BC 8-1-1"
+        url: "https://www.healthlinkbc.ca/"
+      - anchor: "Victoria seniors services"
+        url: "https://www.victoria.ca/EN/main/residents/parks/recreation-facilities/seniors-centres.html"
+    
+    cta_templates:
+      getting_started: "Talk to a Victoria care expert about your home care options"
+      dementia: "Learn about specialized dementia care in Victoria"
+      hospital_to_home: "Get Victoria hospital-to-home transition support"
+      companion_care: "Discover companionship care services in Victoria"
+    
+    anchor_text_variants:
+      - "home care in Victoria"
+      - "Victoria senior care services"
+      - "Vancouver Island elderly care"
+      - "in-home care Victoria"
+
+  oakville:
+    name: Oakville
+    province: Ontario
+    location_url: https://thekey.ca/locations/canada/oakville
+    health_authority: "Halton Healthcare / Ontario Health West"
+    
+    primary_keyword_pool:
+      - "home care Oakville"
+      - "Oakville elderly care services"
+      - "Halton home care support"
+      - "Oakville senior assistance"
+      - "Ontario home care Oakville"
+      - "Oakville aging in place"
+    
+    secondary_keyword_pool:
+      - "Oakville dementia care"
+      - "Oakville post-hospital care"
+      - "Oakville palliative care"
+      - "elderly care services Oakville"
+      - "Oakville companion care"
+      - "Oakville Alzheimer's care"
+      - "Halton Region senior care"
+      - "Burlington elderly care"
+    
+    local_domains:
+      - "oakville.ca"
+      - "halton.ca"
+      - "ontario.ca"
+      - "haltonhealthcare.on.ca"
+    
+    banned_domains:
+      - "worldscholarshipforum.com"
+      - "indeed.com"
+      - "glassdoor.com"
+      - "yelp.ca"
+    
+    healthcare_context: |
+      Oakville residents access home care through Ontario Health's Home and Community Care Support Services.
+      OHIP provides public health insurance. The Ontario Seniors Care at Home Tax Credit offers financial support.
+    
+    authoritative_programs:
+      - name: "Ontario Health - Home and Community Care"
+        url: "https://www.ontariohealth.ca/our-work/programs/home-and-community-care"
+        summary: "Provincial coordination of home care services"
+        accessed: "2025-12-15"
+      - name: "Halton Region Senior Services"
+        url: "https://www.halton.ca/For-Residents/Community-Resources/Seniors-Programs"
+        summary: "Regional senior programs and support services"
+        accessed: "2025-12-15"
+      - name: "Alzheimer Society of Halton"
+        url: "https://alzheimer.ca/halton/"
+        summary: "Local dementia support and caregiver resources"
+        accessed: "2025-12-15"
+    
+    local_stats:
+      - stat: "Halton Region's senior population is growing faster than the provincial average"
+        source: "Halton Region"
+        year: 2023
+      - stat: "Over 700,000 Ontarians receive publicly funded home care annually"
+        source: "Ontario Health"
+        year: 2023
+    
+    h2_seeds:
+      - "How Ontario Health Delivers Home Care in Oakville"
+      - "Understanding Halton Region Senior Services"
+      - "Navigating Home Care Options in Oakville"
+    
+    must_include_entities:
+      - "OHIP"
+      - "Ontario Health"
+      - "Halton Region"
+      - "Ontario"
+      - "Oakville"
+    
+    local_resources:
+      - anchor: "Ontario Home and Community Care"
+        url: "https://www.ontario.ca/page/homecare-seniors"
+      - anchor: "Halton Region senior services"
+        url: "https://www.halton.ca/For-Residents/Community-Resources/Seniors-Programs"
+      - anchor: "Alzheimer Society of Halton"
+        url: "https://alzheimer.ca/halton/"
+      - anchor: "Ontario Seniors Care at Home Tax Credit"
+        url: "https://www.ontario.ca/page/ontario-seniors-care-at-home-tax-credit"
+    
+    cta_templates:
+      getting_started: "Talk to an Oakville care expert about your home care options"
+      dementia: "Learn about specialized dementia care in Oakville"
+      hospital_to_home: "Get Oakville hospital-to-home transition support"
+      companion_care: "Discover companionship care services in Oakville"
+    
+    anchor_text_variants:
+      - "home care in Oakville"
+      - "Oakville senior care services"
+      - "Halton elderly care"
+      - "in-home care Oakville"
+
+# Service pages for internal linking
+service_pages:
+  dementia:
+    url: "https://thekey.ca/our-services/dementia-and-alzheimers-care"
+    anchor_text: "dementia and Alzheimer's care"
+  hospital_to_home:
+    url: "https://thekey.ca/our-services/hospital-to-home"
+    anchor_text: "hospital to home transition care"
+  parkinsons:
+    url: "https://thekey.ca/our-services/parkinsons-care"
+    anchor_text: "Parkinson's care"
+  stroke:
+    url: "https://thekey.ca/our-services/stroke-recovery-care"
+    anchor_text: "stroke recovery care"
+  end_of_life:
+    url: "https://thekey.ca/our-services/end-of-life-care"
+    anchor_text: "end-of-life care"
+  heart_health:
+    url: "https://thekey.ca/our-services/heart-health-care"
+    anchor_text: "heart health care"
+  cancer:
+    url: "https://thekey.ca/our-services/cancer-care"
+    anchor_text: "cancer care support"
+  companion_care:
+    url: "https://thekey.ca/our-services/companion-care"
+    anchor_text: "companion care services"
+
+# CTA base URL
+cta_base_url: "https://thekey.ca/getting-started"

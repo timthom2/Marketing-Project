@@ -1,0 +1,123 @@
+version: "3.0"
+
+models:
+  # Primary writing model - GPT-5.2 for high-quality long-form content
+  writing:
+    model: gpt-5.2
+    max_tokens: 6500
+    temperature: 0.65
+    purpose: "Generate long-form HTML articles with local authority and evidence"
+    word_count_target: "1000-1400 words"
+    constraints:
+      - "Must include ≥2 inline cited statistics with source URLs"
+      - "Must include ≥1 local health authority reference"
+      - "Must include FAQ section (5 questions, 4 unique vs other markets)"
+      - "No generic openers or filler statistics"
+
+  # Default editor/QA - GPT-4.1 for enforcement
+  editing_default:
+    model: gpt-4.1
+    max_tokens: 4500
+    temperature: 0.3
+    purpose: "Editorial quality enforcement and compliance validation"
+    checks:
+      - "≥2 inline cited stats with URLs"
+      - "≥1 local authority link"
+      - "FAQ present with 5 questions"
+      - "Keyword density 1.5-2.5%"
+      - "Meta title <60 chars, no ellipsis"
+      - "Meta description 150-160 chars"
+      - "No banned openers in body"
+
+  # Escalation model for substantive rewrites
+  editing_escalation:
+    model: gpt-5.2
+    max_tokens: 6500
+    temperature: 0.5
+    purpose: "Heavy rewrites after QA or similarity failures"
+    trigger_conditions:
+      - similarity_failed_after_rewrites
+      - major_compliance_issues
+      - editorial_score_below_7
+    escalation_threshold: "After 2 failed rewrite attempts"
+
+  # Web extraction - GPT-4o for content compression
+  web_extraction:
+    model: gpt-4o
+    max_tokens: 800
+    temperature: 0.3
+    purpose: "Extract and compress web page content into brief chunks"
+    constraints:
+      - "Focus on statistics, programs, and actionable facts"
+      - "Preserve source attribution"
+      - "Flag date of information if visible"
+
+  # Research synthesis - GPT-4.1 for evidence-driven briefs
+  research_synthesis:
+    model: gpt-4.1
+    max_tokens: 2500
+    temperature: 0.5
+    purpose: "Synthesize compressed briefs into evidence-driven research packs"
+    constraints:
+      - "Require ≥2 province-level sources"
+      - "No generic seasonality hooks"
+      - "Must include local program names"
+      - "Must include stats with source+date"
+
+  # Embeddings for similarity checking
+  embeddings:
+    model: text-embedding-3-small
+    purpose: "Generate embeddings for similarity detection"
+    alternative: text-embedding-3-large
+    alternative_use_case: "Tighter similarity thresholds when needed"
+
+  # Image analysis - GPT-4o with vision
+  image_analysis:
+    model: gpt-4o
+    max_tokens: 400
+    temperature: 0.3
+    purpose: "Analyze images for article relevance using vision"
+    detail: "low"
+    detail_hero: "high"
+    constraints:
+      - "Score relevance to senior care theme"
+      - "Flag inappropriate or generic stock imagery"
+      - "Verify alt text accuracy"
+
+# Cost controls (required by editor_qa.py)
+cost_controls:
+  max_rewrites: 3
+  max_tokens_per_article: 15000
+  max_api_calls_per_run: 50
+
+# Quality thresholds for run validation
+quality_thresholds:
+  min_word_count: 900
+  max_word_count: 1400
+  min_local_links: 1
+  min_cited_stats: 2
+  min_internal_links: 2
+  min_external_links: 2
+  faq_required: true
+  faq_min_questions: 5
+  faq_unique_vs_other_markets: 4
+  meta_title_max_chars: 60
+  meta_description_min_chars: 150
+  meta_description_max_chars: 160
+  keyword_density_min: 1.5
+  keyword_density_max: 2.5
+  h2_unique_percentage: 50
+  unique_story_lead_per_market: true
+  unique_image_per_market: true
+
+# Similarity thresholds
+similarity:
+  tfidf_threshold: 0.35
+  embedding_threshold: 0.85
+  structural_tokens_include:
+    - h2_text
+    - cta_text
+    - first_100_words
+    - hero_alt_text
+  fail_on_similar_intros: true
+  fail_on_similar_ctas: true
