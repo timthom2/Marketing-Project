@@ -143,13 +143,21 @@ class ResearcherAgent(BaseAgent):
 
     def _get_current_week_theme(self) -> Dict:
         """Get current week theme from content calendar."""
+        # Check for WEEK_OVERRIDE environment variable
+        import os
+        week_override = os.getenv("WEEK_OVERRIDE", "").strip()
+        if week_override:
+            week_key = f"week_{week_override}"
+            if week_key in self.content_calendar["rotation_schedule"]:
+                return self.content_calendar["rotation_schedule"][week_key]
+        
         # Calculate based on current date
         from datetime import date
         today = date.today()
         week_of_year = today.isocalendar()[1]
         
-        # Map to 16-week rotation
-        rotation_week = ((week_of_year - 1) % 16) + 1
+        # Map to 12-week rotation (updated from 16-week)
+        rotation_week = ((week_of_year - 1) % 12) + 1
         week_key = f"week_{rotation_week}"
         
         return self.content_calendar["rotation_schedule"].get(

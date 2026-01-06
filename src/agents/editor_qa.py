@@ -431,6 +431,35 @@ Return ONLY valid JSON:
             self.log_info(f"  Overall Score: {assessment.get('overall_score', 'N/A')}/10")
             if assessment.get("key_issues"):
                 self.log_info(f"  Key Issues: {', '.join(assessment['key_issues'][:2])}")
+
+            # Enforce current-year check to avoid outdated dates in copy
+            from datetime import datetime
+            current_year = datetime.now().year
+            html_content = draft.get("html_content", "")
+            outdated_years = set()
+            for y in range(2020, current_year):
+                if str(y) in html_content:
+                    outdated_years.add(y)
+            if outdated_years:
+                assessment.setdefault("key_issues", []).append(
+                    f"Outdated year references detected: {sorted(outdated_years)}"
+                )
+                # Cap score to force rewrite
+                assessment["overall_score"] = min(assessment.get("overall_score", 5), 6)
+                assessment["needs_improvement"] = True
+
+            # Basic checks for FAQ count and inline authority links
+            faq_count = html_content.lower().count("frequently asked questions")
+            if faq_count == 0:
+                assessment.setdefault("key_issues", []).append("FAQ section missing")
+                assessment["overall_score"] = min(assessment.get("overall_score", 5), 6)
+                assessment["needs_improvement"] = True
+            # Ensure at least two external links (rough heuristic)
+            external_links = html_content.count('href="http')
+            if external_links < 2:
+                assessment.setdefault("key_issues", []).append("Too few external authority links inline")
+                assessment["overall_score"] = min(assessment.get("overall_score", 5), 6)
+                assessment["needs_improvement"] = True
             
             return assessment
             
