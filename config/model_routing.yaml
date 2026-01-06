@@ -7,7 +7,7 @@ models:
     max_tokens: 6500
     temperature: 0.65
     purpose: "Generate long-form HTML articles with local authority and evidence"
-    word_count_target: "1000-1400 words"
+    word_count_target: "900-1200 words"
     constraints:
       - "Must include ≥2 inline cited statistics with source URLs"
       - "Must include ≥1 local health authority reference"
