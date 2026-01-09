@@ -15,18 +15,50 @@ from pathlib import Path
 
 from orchestrator.coordinator import run_weekly
 from utils.logger import get_logger
-from utils.config_loader import get_timezone
+from utils.config_loader import get_timezone, get_env_var
 
 import pytz
 
 # Set timezone
 tz = pytz.timezone(get_timezone())
 
+def _env_flag(name: str, default: str = "false") -> bool:
+    return get_env_var(name, default).strip().lower() in ("1", "true", "yes", "on")
+
+
+def _output_dir_for(run_id: str) -> Path:
+    return Path(__file__).parent.parent / "outputs" / run_id
+
+
+def _should_skip_run(start_time: datetime, logger) -> bool:
+    allow_non_tuesday = _env_flag("ALLOW_NON_TUESDAY_RUN")
+    allow_rerun = _env_flag("ALLOW_SAME_DAY_RERUN")
+    weekday = start_time.weekday()  # Monday=0
+    run_id = start_time.strftime('%Y-%m-%d')
+
+    if not allow_non_tuesday and weekday != 1:
+        logger.info(
+            f"Guard: Skipping run for {run_id} (today is {start_time.strftime('%A')}; only Tuesdays allowed)."
+        )
+        return True
+
+    output_dir = _output_dir_for(run_id)
+    if output_dir.exists() and not allow_rerun:
+        logger.info(
+            f"Guard: Skipping run for {run_id} (output directory already exists)."
+        )
+        return True
+
+    return False
+
 
 async def main():
     """Main entry point for weekly content generation."""
     start_time = datetime.now(tz)
     logger = get_logger(__name__)
+
+    if _should_skip_run(start_time, logger):
+        return 0
     
     logger.info("=" * 70)
     logger.info(f"TheKey Canada SEO Content Bot - Starting weekly run")
