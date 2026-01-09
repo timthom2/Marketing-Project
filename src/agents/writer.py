@@ -64,7 +64,7 @@ class WriterAgent(BaseAgent):
             elif attempt < max_attempts - 1:
                 self.log_warning(f"Validation issues for {market_name} (attempt {attempt + 1}): {issues[:2]}")
                 # Fix meta description if too short
-                self._fix_meta_description(article_data, research_pack)
+                self._fix_meta_description(article_data, research_pack, markets_config)
             else:
                 self.log_warning(f"Using article despite issues: {issues[:2]}")
 
@@ -72,7 +72,7 @@ class WriterAgent(BaseAgent):
         self._ensure_local_h2(article_data, research_pack["market_name"])
         self._ensure_internal_links(article_data, research_pack, markets_config)
         self._ensure_cta_localization(article_data, research_pack, markets_config)
-        self._force_meta_description(article_data, research_pack)
+        self._force_meta_description(article_data, research_pack, markets_config)
         
         # Note: Image selection is now handled by coordinator after all articles
         # are finalized to ensure unique images per market. Use placeholder here.
@@ -810,15 +810,27 @@ Return ONLY valid JSON:
             trimmed = trimmed[:last_space]
         return trimmed
 
-    def _force_meta_description(self, article_data: Dict, research_pack: Dict) -> None:
+    def _get_meta_description_authority(self, research_pack: Dict, markets_config: Dict) -> str:
+        market_key = research_pack.get("market", "")
+        market_config = markets_config.get("markets", {}).get(market_key, {})
+        authority = (market_config.get("health_authority") or "").strip()
+        if authority:
+            return authority
+        province = (market_config.get("province") or research_pack.get("province") or "").strip().lower()
+        if province == "ontario":
+            return "Ontario Health atHome"
+        return "local health authority"
+
+    def _force_meta_description(self, article_data: Dict, research_pack: Dict, markets_config: Dict) -> None:
         """Ensure meta description lands in 150-160 char range with keyword and value prop."""
         meta_desc = article_data.get("meta_description", "") or ""
         primary_keyword = research_pack.get("keywords", {}).get("primary", "")
         market_name = research_pack.get("market_name", "")
+        authority = self._get_meta_description_authority(research_pack, markets_config)
         if 150 <= len(meta_desc) <= 160:
             return
         template = (
-            f"{market_name} {primary_keyword.lower()} guide: use Ontario Health atHome, local resources, "
+            f"{market_name} {primary_keyword.lower()} guide: use {authority}, local resources, "
             f"and practical steps to keep aging in place safe and supported this year."
         ).strip()
         if len(template) < 150:
@@ -997,11 +1009,12 @@ Return ONLY valid JSON:
         
         return issues
 
-    def _fix_meta_description(self, article_data: Dict, research_pack: Dict) -> None:
+    def _fix_meta_description(self, article_data: Dict, research_pack: Dict, markets_config: Dict) -> None:
         """Fix common article issues inline."""
         meta_desc = article_data.get("meta_description", "")
         market_name = research_pack.get("market_name", "")
         primary_keyword = research_pack.get("keywords", {}).get("primary", "")
+        authority = self._get_meta_description_authority(research_pack, markets_config)
         
         # Fix too-short meta description
         if len(meta_desc) < 150:
@@ -1027,8 +1040,8 @@ Return ONLY valid JSON:
         meta_desc = article_data.get("meta_description", "")
         if len(meta_desc) < 150:
             template = (
-                f"{market_name} {primary_keyword.lower()} guide: use local services, CLSCs, and Info-Santé 811 "
-                f"to refresh your 2026 care plan, reduce winter risks, and keep aging at home safely."
+                f"{market_name} {primary_keyword.lower()} guide: use {authority}, local resources, and practical steps "
+                f"to keep aging at home safe and supported this year."
             )
             if len(template) > 160:
                 template = template[:157].rsplit(" ", 1)[0].rstrip(".,;:") + "."
