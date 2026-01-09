@@ -129,7 +129,9 @@
       overflow: hidden;
       border: 1px solid rgba(148, 163, 184, 0.3);
       background: #fff;
-      height: 560px;
+      height: 75vh;
+      min-height: 620px;
+      max-height: 900px;
     }
 
     .preview iframe {
@@ -261,7 +263,11 @@
 
     @media (max-width: 980px) {
       .grid { grid-template-columns: 1fr; }
-      .preview { height: 420px; }
+      .preview {
+        height: 60vh;
+        min-height: 420px;
+        max-height: 640px;
+      }
       header, main { padding: 20px; }
       .image-search { flex-direction: column; align-items: stretch; }
     }
