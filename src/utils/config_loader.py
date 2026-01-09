@@ -56,13 +56,20 @@ def get_email_config() -> Dict[str, str]:
     Returns:
         Dict: Email configuration with keys: host, port, user, pass, from, to
     """
+    def to_bool(value: Optional[str], default: bool) -> bool:
+        if value is None:
+            return default
+        return value.strip().lower() in ("true", "1", "yes", "on")
+
     return {
         "host": get_env_var("SMTP_HOST", "smtp.postmarkapp.com"),
         "port": int(get_env_var("SMTP_PORT", "587")),
-        "user": get_env_var(" SMTP_USER"),
+        "user": get_env_var("SMTP_USER"),
         "pass": get_env_var("SMTP_PASS"),
         "from": get_env_var("EMAIL_FROM", "content-bot@thekey.com"),
-        "to": get_env_var("EMAIL_TO", "tt@thekey.com")
+        "to": get_env_var("EMAIL_TO", "tt@thekey.com"),
+        "use_tls": to_bool(get_env_var("SMTP_USE_TLS"), False),
+        "start_tls": to_bool(get_env_var("SMTP_STARTTLS"), True)
     }
 
 

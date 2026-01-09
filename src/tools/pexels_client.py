@@ -125,7 +125,6 @@ class PexelsClient:
                 "per_page": min(per_page, 80),
                 "orientation": orientation
             }
-
             async with aiohttp.ClientSession() as session:
                 async with session.get(
                     f"{self.BASE_URL}/search",

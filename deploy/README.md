@@ -51,8 +51,19 @@ SMTP_HOST=smtp.postmarkapp.com
 SMTP_PORT=587
 SMTP_USER=your-postmark-token
 SMTP_PASS=your-postmark-token
+SMTP_USE_TLS=false
+SMTP_STARTTLS=true
 EMAIL_FROM=content-bot@thekey.com
 EMAIL_TO=tt@thekey.com
+
+# Review portal (optional)
+REVIEW_MODE=off
+REVIEW_PORTAL_BASE_URL=https://review.your-domain.com
+REVIEW_DEADLINE_HOURS=48
+REVIEW_REMINDER_HOURS=24
+REVIEW_REPLY_TO=content-review@your-domain.com
+REVIEW_FINAL_EMAIL_TO=content-ops@your-domain.com
+REVIEW_PROCESS_ON_SUBMIT=true
 
 # Timezone (optional, service uses system timezone)
 TZ=America/Toronto
@@ -150,6 +161,18 @@ sudo systemctl disable thekey-content-bot.timer
 
 # Enable timer (start scheduled runs)
 sudo systemctl enable thekey-content-bot.timer
+```
+
+### Review Portal Services
+```bash
+# Start review portal
+sudo systemctl start thekey-review-portal.service
+
+# Check review portal status
+sudo systemctl status thekey-review-portal.service
+
+# Check review processor timer
+sudo systemctl list-timers thekey-review-processor.timer
 ```
 
 ### Reload Configuration

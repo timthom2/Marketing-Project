@@ -1,0 +1,181 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="grid">
+  <div class="card">
+    <div class="label">Market</div>
+    <div class="title">{{ market_name }}</div>
+    <div class="meta">
+      <span><strong>Run ID:</strong> {{ run_id }}</span>
+      <span><strong>Keyword:</strong> {{ primary_keyword }}</span>
+    </div>
+    <div class="divider"></div>
+    {% if html_content_diff %}
+      <div class="preview-toggle">
+        <button class="secondary" type="button" id="toggle-diff">Show changes</button>
+        <span class="note" id="diff-note" style="margin: 0;">Inline highlights show what changed after revisions.</span>
+      </div>
+      <div style="height: 12px;"></div>
+    {% endif %}
+    <div class="preview">
+      <iframe id="preview-clean" srcdoc="{{ html_content | e }}"></iframe>
+    </div>
+    {% if html_content_diff %}
+      <div class="preview" id="preview-diff" style="display: none; margin-top: 12px;">
+        <iframe srcdoc="{{ html_content_diff | e }}"></iframe>
+      </div>
+    {% endif %}
+    <p class="note">If the preview looks blank, use the download button to view the HTML locally.</p>
+  </div>
+
+  <div class="card">
+    <div class="label">Review Status</div>
+    {% if status == "approved" or status == "rewritten" or status == "auto_approved_due_to_deadline" %}
+      <div class="pill success">Review complete</div>
+    {% elif status == "submitted" %}
+      <div class="pill">Feedback submitted</div>
+    {% else %}
+      <div class="pill danger">Action required</div>
+    {% endif %}
+
+    <div class="divider"></div>
+
+    <div class="label">Hero image</div>
+    <p class="note">Search Pexels for a horizontal image to replace the current hero.</p>
+    <form class="image-search" method="get" action="/review/{{ token }}">
+      <input id="image_query" name="image_query" type="text" placeholder="Search Pexels (e.g., senior home care)" value="{{ image_query or '' }}" />
+      <button class="secondary" type="submit">Search Pexels</button>
+    </form>
+    {% if image_source_label %}
+      <p class="note">{{ image_source_label }}</p>
+    {% endif %}
+    {% if image_validation_note %}
+      <p class="note">{{ image_validation_note }}</p>
+    {% endif %}
+    {% if image_filtered_count %}
+      <p class="note">{{ image_filtered_count }} image(s) hidden because they were already approved for another market.</p>
+    {% endif %}
+
+    <form method="post" action="/review/{{ token }}">
+      <input id="image_url" name="image_url" type="hidden" />
+      <input id="image_url_large" name="image_url_large" type="hidden" />
+      <input id="image_url_medium" name="image_url_medium" type="hidden" />
+      <input id="image_alt" name="image_alt" type="hidden" />
+      <input id="image_photographer" name="image_photographer" type="hidden" />
+      <input id="image_photographer_url" name="image_photographer_url" type="hidden" />
+      <input id="image_id" name="image_id" type="hidden" />
+
+      {% if image_results %}
+        <div class="image-grid">
+          {% for image in image_results %}
+            <label class="image-card">
+              <input type="radio" name="image_choice"
+                     data-url="{{ image.url }}"
+                     data-url-large="{{ image.url_large }}"
+                     data-url-medium="{{ image.url_medium }}"
+                     data-alt="{{ image.alt }}"
+                     data-photographer="{{ image.photographer }}"
+                     data-photographer-url="{{ image.photographer_url }}"
+                     data-id="{{ image.id }}" />
+              <img src="{{ image.url_medium or image.url_large or image.url }}" alt="{{ image.alt }}" />
+              <div class="image-meta">
+                <div class="image-alt">{{ image.alt }}</div>
+                <div class="image-credit">
+                  <a href="{{ image.photographer_url }}" target="_blank" rel="noopener">Photo by {{ image.photographer }}</a>
+                  on <a href="https://www.pexels.com" target="_blank" rel="noopener">Pexels</a>
+                </div>
+              </div>
+            </label>
+          {% endfor %}
+        </div>
+      {% else %}
+        <p class="note">No results found. Try a different search.</p>
+      {% endif %}
+
+      <label class="label" for="decision">Decision</label>
+      <select id="decision" name="decision" required>
+        <option value="approve" {% if decision == "approve" %}selected{% endif %}>Approve as-is</option>
+        <option value="revise" {% if decision == "revise" %}selected{% endif %}>Request revisions</option>
+      </select>
+
+      <div id="feedback-group">
+        <div style="height: 16px;"></div>
+        <label class="label" for="notes">Feedback</label>
+        <textarea id="notes" name="notes" placeholder="List any changes needed (bullets preferred).">{{ feedback.notes if feedback else "" }}</textarea>
+        <p class="note">Do not include PHI or sensitive personal data in feedback.</p>
+      </div>
+
+      <div style="height: 16px;"></div>
+      <label class="label" for="reviewer_name">Your name (optional)</label>
+      <input id="reviewer_name" name="reviewer_name" type="text" placeholder="GM name" value="{{ feedback.reviewer_name if feedback else "" }}" />
+
+      <div style="height: 16px;"></div>
+      <label class="label" for="reviewer_email">Your email (optional)</label>
+      <input id="reviewer_email" name="reviewer_email" type="email" placeholder="gm@company.com" value="{{ feedback.reviewer_email if feedback else "" }}" />
+
+      <div class="actions">
+        <button type="submit">Submit Review</button>
+        <a class="button" href="/review/{{ token }}/download">Download HTML</a>
+      </div>
+    </form>
+  </div>
+</div>
+<script>
+  const decisionSelect = document.getElementById("decision");
+  const feedbackGroup = document.getElementById("feedback-group");
+  const imageRadios = document.querySelectorAll('input[name="image_choice"]');
+  const imageFields = {
+    url: document.getElementById("image_url"),
+    urlLarge: document.getElementById("image_url_large"),
+    urlMedium: document.getElementById("image_url_medium"),
+    alt: document.getElementById("image_alt"),
+    photographer: document.getElementById("image_photographer"),
+    photographerUrl: document.getElementById("image_photographer_url"),
+    id: document.getElementById("image_id"),
+  };
+
+  const toggleFeedback = () => {
+    if (!decisionSelect || !feedbackGroup) return;
+    feedbackGroup.style.display = decisionSelect.value === "revise" ? "block" : "none";
+  };
+
+  const selectImage = (radio) => {
+    if (!radio) return;
+    Object.values(imageFields).forEach((field) => {
+      if (field) field.value = "";
+    });
+    if (imageFields.url) imageFields.url.value = radio.dataset.url || "";
+    if (imageFields.urlLarge) imageFields.urlLarge.value = radio.dataset.urlLarge || "";
+    if (imageFields.urlMedium) imageFields.urlMedium.value = radio.dataset.urlMedium || "";
+    if (imageFields.alt) imageFields.alt.value = radio.dataset.alt || "";
+    if (imageFields.photographer) imageFields.photographer.value = radio.dataset.photographer || "";
+    if (imageFields.photographerUrl) imageFields.photographerUrl.value = radio.dataset.photographerUrl || "";
+    if (imageFields.id) imageFields.id.value = radio.dataset.id || "";
+    document.querySelectorAll(".image-card").forEach((card) => card.classList.remove("selected"));
+    const card = radio.closest(".image-card");
+    if (card) card.classList.add("selected");
+  };
+
+  if (decisionSelect) {
+    decisionSelect.addEventListener("change", toggleFeedback);
+    toggleFeedback();
+  }
+
+  const diffToggle = document.getElementById("toggle-diff");
+  const previewClean = document.getElementById("preview-clean");
+  const previewDiff = document.getElementById("preview-diff");
+  if (diffToggle && previewClean && previewDiff) {
+    diffToggle.addEventListener("click", () => {
+      const showingDiff = previewDiff.style.display !== "none";
+      previewDiff.style.display = showingDiff ? "none" : "block";
+      previewClean.style.display = showingDiff ? "block" : "none";
+      diffToggle.textContent = showingDiff ? "Show changes" : "Hide changes";
+    });
+  }
+
+  if (imageRadios && imageRadios.length) {
+    imageRadios.forEach((radio) => {
+      radio.addEventListener("change", () => selectImage(radio));
+    });
+  }
+</script>
+{% endblock %}

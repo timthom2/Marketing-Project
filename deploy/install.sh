@@ -57,11 +57,18 @@ fi
 # Install systemd units
 sudo cp deploy/thekey-content-bot.service /etc/systemd/system/
 sudo cp deploy/thekey-content-bot.timer /etc/systemd/system/
+sudo cp deploy/thekey-review-portal.service /etc/systemd/system/
+sudo cp deploy/thekey-review-processor.service /etc/systemd/system/
+sudo cp deploy/thekey-review-processor.timer /etc/systemd/system/
 sudo systemctl daemon-reload
 
 # Enable and start timer
 sudo systemctl enable thekey-content-bot.timer
 sudo systemctl start thekey-content-bot.timer
+sudo systemctl enable thekey-review-portal.service
+sudo systemctl start thekey-review-portal.service
+sudo systemctl enable thekey-review-processor.timer
+sudo systemctl start thekey-review-processor.timer
 
 # Setup permissions
 sudo chown -R thekey:thekey /home/thekey/thekey-content-bot

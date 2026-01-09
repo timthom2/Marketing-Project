@@ -72,12 +72,13 @@ class WriterAgent(BaseAgent):
         self._ensure_local_h2(article_data, research_pack["market_name"])
         self._ensure_internal_links(article_data, research_pack, markets_config)
         self._ensure_cta_localization(article_data, research_pack, markets_config)
+        self._force_meta_description(article_data, research_pack)
         
         # Note: Image selection is now handled by coordinator after all articles
         # are finalized to ensure unique images per market. Use placeholder here.
         placeholder_image = {
-            "url": "",
-            "url_large": "",
+            "url": self.brightspot_config.get("placeholder_image", ""),
+            "url_large": self.brightspot_config.get("placeholder_image", ""),
             "alt_text": f"Home care in {market_name}",
             "photographer": "Pending",
             "credit": "",
@@ -96,7 +97,7 @@ class WriterAgent(BaseAgent):
         # Placeholder image metadata - will be updated by coordinator
         images = [
             {
-                "url": "",
+                "url": self.brightspot_config.get("placeholder_image", ""),
                 "credit": "",
                 "photographer": "Pending",
                 "recommended_filename": f"{market}-hero-pexels.jpg",
@@ -411,6 +412,43 @@ Return ONLY valid JSON:
         market = research_pack["market"].lower()
         market_name = research_pack["market_name"]
         title = article_data["title"]
+        import re
+
+        def _sanitize_inline_sources(text: str) -> str:
+            """Remove inline '(Source: ...)' snippets; move sourcing to Sources block instead."""
+            cleaned = re.sub(r"\(Source:[^)]+\)", "", text, flags=re.IGNORECASE)
+            cleaned = re.sub(r"Source:\s*[^<\n]+", "", cleaned, flags=re.IGNORECASE)
+            cleaned = re.sub(r"\(.*?source:.*?\)", "", cleaned, flags=re.IGNORECASE | re.DOTALL)
+            cleaned = re.sub(r"<span[^>]*>[^<]*source:[^<]*</span>", "", cleaned, flags=re.IGNORECASE)
+            cleaned = re.sub(r"Source:\s*<a[^>]+>.*?</a>", "", cleaned, flags=re.IGNORECASE | re.DOTALL)
+            cleaned = re.sub(r"Source:\s*[^.<]+(?:\.\s*|$)", "", cleaned, flags=re.IGNORECASE)
+            return cleaned
+
+        def _split_wrapped_lists(text: str) -> str:
+            """Unwrap lists incorrectly nested inside <p> tags."""
+            text = re.sub(r"<p>([^<]*?)(<ol[^>]*>.*?</ol>)</p>", r"<p>\1</p>\n\2", text, flags=re.IGNORECASE | re.DOTALL)
+            text = re.sub(r"<p>([^<]*?)(<ul[^>]*>.*?</ul>)</p>", r"<p>\1</p>\n\2", text, flags=re.IGNORECASE | re.DOTALL)
+            return text
+
+        def _remove_banned_phrases(text: str) -> str:
+            banned = self.brand_config.get("anti_generic_requirements", {}).get("banned_openers", [])
+            if not banned:
+                banned = [
+                    "Many families",
+                    "As we age",
+                    "In today's world",
+                    "It's no secret that",
+                    "When it comes to",
+                    "There's no doubt that",
+                    "In recent years",
+                    "As we all know",
+                    "For many people",
+                    "It goes without saying",
+                    "In this article"
+                ]
+            for phrase in banned:
+                text = re.sub(rf"\b{re.escape(phrase)}\b", "Families", text, flags=re.IGNORECASE)
+            return text
         
         # Get brand colors and typography
         colors = self.brand_config.get('color_palette', {})
@@ -495,16 +533,26 @@ Return ONLY valid JSON:
                 )
             elif section["type"] == "content":
                 body_style = typo.get('body', {})
-                html_lines.append(
-                    f'<p style="font-family: {body_style.get("font_family", "Helvetica Neue, Helvetica, Arial, sans-serif")}; '
-                    f'font-size: {body_style.get("font_size", "16px")}; '
-                    f'line-height: {body_style.get("line_height", "1.6")}; '
-                    f'color: {body_style.get("color", "#333")}; '
-                    f'margin-bottom: {body_style.get("margin_bottom", "16px")};">'
-                    f'{section["content"]}</p>'
-                )
+                content_html = _remove_banned_phrases(_split_wrapped_lists(_sanitize_inline_sources(section["content"])))
+                # Avoid wrapping block elements in <p> to prevent invalid nesting
+                block_indicators = ("<ul", "<ol", "<div", "<table", "<blockquote", "<h2", "<h3", "<h4", "<p>")
+                if any(tag in content_html.lower() for tag in block_indicators):
+                    html_lines.append(content_html)
+                else:
+                    html_lines.append(
+                        f'<p style="font-family: {body_style.get("font_family", "Helvetica Neue, Helvetica, Arial, sans-serif")}; '
+                        f'font-size: {body_style.get("font_size", "16px")}; '
+                        f'line-height: {body_style.get("line_height", "1.6")}; '
+                        f'color: {body_style.get("color", "#333")}; '
+                        f'margin-bottom: {body_style.get("margin_bottom", "16px")};">'
+                        f'{content_html}</p>'
+                    )
             elif section["type"] == "callout":
                 callout_style = styling.get('callout_box', {})
+                callout_title = section.get("title", "") or research_pack.get("local_hook", {}).get("title", "Did you know?")
+                if "local hook" in callout_title.lower():
+                    callout_title = research_pack.get("local_hook", {}).get("title", callout_title)
+                callout_content = _remove_banned_phrases(_split_wrapped_lists(_sanitize_inline_sources(section.get("content", ""))))
                 html_lines.append(
                     f'<div style="background-color: {callout_style.get("background_color", colors.get("light_gold", "#F0EEDC"))}; '
                     f'padding: {callout_style.get("padding", "24px")}; '
@@ -514,9 +562,9 @@ Return ONLY valid JSON:
                 html_lines.append(
                     f'<h3 style="margin-top: {callout_style.get("h3_margin_top", "0")}; '
                     f'color: {callout_style.get("h3_color", colors.get("everest", "#06262D"))};">'
-                    f'{section.get("title", "Did you know?")}</h3>'
+                    f'{callout_title}</h3>'
                 )
-                html_lines.append(f'<p style="margin-bottom: 0;">{section["content"]}</p>')
+                html_lines.append(f'<p style="margin-bottom: 0;">{callout_content}</p>')
                 html_lines.append('</div>')
             elif section["type"] == "cta":
                 cta_style = styling.get('cta_box', {})
@@ -655,6 +703,44 @@ Return ONLY valid JSON:
             
             html_lines.append('</ul>')
         
+        # Add sources section using citations extracted from research
+        citations = self._extract_citations(research_pack)
+        if citations:
+            h2_style = typo.get('h2', {})
+            body_style = typo.get('body', {})
+            html_lines.append(
+                f'<h2 style="font-family: {h2_style.get("font_family", "Times New Roman, serif")}; '
+                f'font-size: {h2_style.get("font_size", "24px")}; '
+                f'color: {h2_style.get("color", colors.get("everest", "#06262D"))}; '
+                f'margin-top: {h2_style.get("margin_top", "30px")}; '
+                f'margin-bottom: {h2_style.get("margin_bottom", "12px")};">'
+                f'Sources</h2>'
+            )
+            html_lines.append(
+                f'<ul style="font-family: {body_style.get("font_family", "Helvetica Neue, Helvetica, Arial, sans-serif")}; '
+                f'font-size: {body_style.get("font_size", "16px")}; '
+                f'line-height: 1.6; color: {body_style.get("color", "#333")}; '
+                f'margin-bottom: 16px; padding-left: 20px;">'
+            )
+            link_color = colors.get("everest", "#06262D")
+            for cite in citations:
+                # If citation already has an href, keep it; otherwise render plain text
+                if "http" in cite:
+                    parts = cite.split(", ")
+                    text = parts[0]
+                    url = parts[-1] if parts[-1].startswith("http") else None
+                    if url:
+                        html_lines.append(
+                            f'<li style="margin-bottom: 8px;"><a href="{url}" '
+                            f'style="color: {link_color}; text-decoration: underline; font-weight: 600;" '
+                            f'target="_blank" rel="noopener">{text}</a></li>'
+                        )
+                    else:
+                        html_lines.append(f'<li style="margin-bottom: 8px;">{cite}</li>')
+                else:
+                    html_lines.append(f'<li style="margin-bottom: 8px;">{cite}</li>')
+            html_lines.append('</ul>')
+        
         # Add disclaimer
         html_lines.append(
             f'<p style="font-size: 12px; color: #999; margin: 32px 0 0 0; padding-top: 16px; border-top: 1px solid #eee;">'
@@ -664,7 +750,9 @@ Return ONLY valid JSON:
         # Close wrapper
         html_lines.append('</div>')
         
-        return '\n'.join(html_lines)
+        html_output = '\n'.join(html_lines)
+        html_output = _remove_banned_phrases(html_output)
+        return html_output
 
     def _generate_image_suggestions(
         self,
@@ -721,6 +809,24 @@ Return ONLY valid JSON:
         if last_space > 40:
             trimmed = trimmed[:last_space]
         return trimmed
+
+    def _force_meta_description(self, article_data: Dict, research_pack: Dict) -> None:
+        """Ensure meta description lands in 150-160 char range with keyword and value prop."""
+        meta_desc = article_data.get("meta_description", "") or ""
+        primary_keyword = research_pack.get("keywords", {}).get("primary", "")
+        market_name = research_pack.get("market_name", "")
+        if 150 <= len(meta_desc) <= 160:
+            return
+        template = (
+            f"{market_name} {primary_keyword.lower()} guide: use Ontario Health atHome, local resources, "
+            f"and practical steps to keep aging in place safe and supported this year."
+        ).strip()
+        if len(template) < 150:
+            pad = " Learn how to schedule assessments, use tax credits, and make winter home safety improvements."
+            template = (template + pad)[:200]  # temporary extension before trim
+        if len(template) > 160:
+            template = template[:157].rsplit(" ", 1)[0].rstrip(".,;:") + "."
+        article_data["meta_description"] = template
 
     def _ensure_local_h2(self, article_data: Dict, market_name: str) -> None:
         """Ensure at least one H2 explicitly references the market for uniqueness."""
@@ -916,3 +1022,14 @@ Return ONLY valid JSON:
             if not truncated.endswith("."):
                 truncated = truncated.rstrip(".,;:") + "."
             article_data["meta_description"] = truncated
+
+        # Final guard: ensure 150-160 chars using a fresh template if still short
+        meta_desc = article_data.get("meta_description", "")
+        if len(meta_desc) < 150:
+            template = (
+                f"{market_name} {primary_keyword.lower()} guide: use local services, CLSCs, and Info-Santé 811 "
+                f"to refresh your 2026 care plan, reduce winter risks, and keep aging at home safely."
+            )
+            if len(template) > 160:
+                template = template[:157].rsplit(" ", 1)[0].rstrip(".,;:") + "."
+            article_data["meta_description"] = template

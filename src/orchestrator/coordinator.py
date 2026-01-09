@@ -11,9 +11,11 @@ from agents.editor_qa import EditorQAAgent
 from agents.dispatcher import DispatcherAgent
 from agents.image_selector import ImageSelectorAgent
 # Note: ResearcherAgent also imported for reset_story_lead_rotation()
+import re
 from utils.config_loader import load_config
-from utils.file_manager import create_output_directory
+from utils.file_manager import create_output_directory, save_json
 from utils.logger import get_logger
+from review.review_manager import create_review_state, send_review_requests
 
 logger = get_logger(__name__)
 
@@ -28,6 +30,10 @@ async def run_weekly() -> Dict:
     markets_config = load_config("markets")
     run_id = datetime.now().strftime("%Y-%m-%d")
     output_dir = create_output_directory(run_id)
+    run_mode = os.getenv("RUN_MODE", "publish").strip().lower() or "publish"
+    if run_mode not in ("publish", "explore"):
+        logger.warning(f"Invalid RUN_MODE '{run_mode}' provided. Defaulting to 'publish'.")
+        run_mode = "publish"
 
     # Check for single-market testing mode
     test_market = os.getenv("TEST_MARKET", "").strip().lower()
@@ -54,12 +60,14 @@ async def run_weekly() -> Dict:
         "markets": {},
         "status": "running",
         "test_mode": bool(test_market),
-        "test_market": test_market if test_market else None
+        "test_market": test_market if test_market else None,
+        "run_mode": run_mode
     }
 
     logger.info(f"Initializing run {run_id}")
     logger.info(f"Output directory: {output_dir}")
     logger.info(f"Markets to process: {len(markets_to_process)} ({', '.join(markets_to_process.keys())})")
+    logger.info(f"Run mode: {run_mode}")
 
     try:
         # Reset image deduplication tracker for this run
@@ -153,33 +161,54 @@ async def run_weekly() -> Dict:
             logger.info(f"   • HTML File: {article['html_filename']}")
             logger.info(f"   • JSON File: {article['json_filename']}")
 
-        # Step 5: Sequential image selection (after all articles finalized)
-        # This ensures no duplicate images across markets by selecting one at a time
-        logger.info("Step 5: Running sequential image selection for all markets...")
-        image_selector = ImageSelectorAgent()
-        
-        for i, article in enumerate(final_articles):
-            market_name = article['market_name']
-            market_key = article['market']
-            
-            # Find the corresponding research pack
-            research_pack = research_packs_dict.get(market_name)
-            if not research_pack:
-                logger.warning(f"No research pack found for {market_name}, skipping image selection")
-                continue
-            
-            logger.info(f"Selecting image for {market_name} ({i+1}/{len(final_articles)})...")
-            selected_image = await image_selector.run(article, research_pack)
-            
-            # Update article with selected image
-            article = _update_article_with_image(article, selected_image, market_key, market_name)
-            final_articles[i] = article
-            
-            logger.info(f"✓ Image selected for {market_name} (ID: {selected_image.get('id', 'N/A')})")
-        
-        logger.info(f"Image selection completed for {len(final_articles)} markets")
+        # Post-process articles to enforce banned-phrase removal, meta length, and keyword density
+        final_articles = [
+            _post_process_article(article, research_packs_dict.get(article["market_name"], {}))
+            for article in final_articles
+        ]
 
-        # Step 6: Dispatcher email delivery
+        # Step 5: Sequential image selection (after all articles finalized)
+        # Skip real selection in explore mode to keep runs fast and avoid burning uniqueness pool
+        if run_mode == "publish":
+            logger.info("Step 5: Running sequential image selection for all markets...")
+            image_selector = ImageSelectorAgent()
+            
+            for i, article in enumerate(final_articles):
+                market_name = article['market_name']
+                market_key = article['market']
+                
+                # Find the corresponding research pack
+                research_pack = research_packs_dict.get(market_name)
+                if not research_pack:
+                    logger.warning(f"No research pack found for {market_name}, skipping image selection")
+                    continue
+                
+                logger.info(f"Selecting image for {market_name} ({i+1}/{len(final_articles)})...")
+                selected_image = await image_selector.run(article, research_pack)
+                
+                # Update article with selected image
+                article = _update_article_with_image(article, selected_image, market_key, market_name)
+                final_articles[i] = article
+                
+                logger.info(f"✓ Image selected for {market_name} (ID: {selected_image.get('id', 'N/A')})")
+            
+            logger.info(f"Image selection completed for {len(final_articles)} markets")
+        else:
+            logger.info("Step 5: RUN_MODE=explore → skipping real image selection; keeping placeholders.")
+            for i, article in enumerate(final_articles):
+                metadata = article.get("metadata", {})
+                images = metadata.get("images", [])
+                if images:
+                    # Mark status for downstream reviewers
+                    metadata["image_selection_status"] = "skipped_explore_mode"
+                    # Ensure placeholder URL is set
+                    if not images[0].get("url"):
+                        images[0]["url"] = load_config("brightspot_guide").get("placeholder_image", "")
+                        images[0]["url_large"] = images[0]["url"]
+                final_articles[i]["metadata"] = metadata
+
+        # Step 6: Dispatcher email delivery (or review handoff)
+        review_mode = os.getenv("REVIEW_MODE", "off").strip().lower() in ("on", "true", "1", "yes")
         logger.info("Step 6: Dispatching articles and sending email...")
         dispatcher = DispatcherAgent()
         run_summary = {
@@ -192,13 +221,35 @@ async def run_weekly() -> Dict:
             "uniqueness_report": uniqueness_report
         }
 
-        delivery_success = await dispatcher.dispatch(final_articles, run_summary)
+        delivery_success = await dispatcher.dispatch(final_articles, run_summary, send_email=not review_mode)
 
         if not delivery_success:
             run_summary["status"] = "email_failed"
             logger.error("Email delivery failed - articles saved to output directory")
         else:
             logger.info("Email delivered successfully")
+
+        if review_mode:
+            logger.info("Review mode enabled - creating GM review requests...")
+            try:
+                deadline_hours = int(os.getenv("REVIEW_DEADLINE_HOURS", "48"))
+            except ValueError:
+                deadline_hours = 48
+
+            review_state = create_review_state(
+                run_summary,
+                base_url=os.getenv("REVIEW_PORTAL_BASE_URL", ""),
+                deadline_hours=deadline_hours
+            )
+            recipients = await send_review_requests(review_state, run_summary)
+            run_summary["review_mode"] = True
+            run_summary["review_recipients"] = recipients
+            run_summary["status"] = "awaiting_review"
+            logger.info(f"Review requests sent to {len(recipients)} GM(s)")
+            try:
+                save_json(run_summary, Path(run_summary["output_dir"]) / "run_summary.json")
+            except Exception as e:
+                logger.warning(f"Failed to update run_summary.json with review metadata: {e}")
 
         # Step 7: Finalize
         duration = (datetime.now() - datetime.fromisoformat(run_state["start_time"])).total_seconds()
@@ -295,19 +346,123 @@ def _update_article_with_image(article: Dict, selected_image: Dict, market: str,
     hero_html += '</div>'
     
     # Replace existing hero image in HTML
-    import re
     html_content = article['html_content']
-    
-    # Pattern to match the hero image div
-    hero_pattern = r'<div style="margin-bottom: [^"]+;">\s*<img src="[^"]*"[^>]*>\s*(?:<p style="font-size: 12px[^<]*</p>\s*)?</div>'
-    
-    if re.search(hero_pattern, html_content, re.DOTALL):
-        html_content = re.sub(hero_pattern, hero_html, html_content, count=1, flags=re.DOTALL)
-    else:
-        # If no hero found, insert after blog-content-module div
+    try:
+        from bs4 import BeautifulSoup
+        soup = BeautifulSoup(html_content, "html.parser")
+        wrapper = soup.find("div", class_="blog-content-module")
+        if not wrapper:
+            raise ValueError("Missing wrapper")
+
+        # Remove any hero blocks before the first H1 to avoid duplicates
+        for child in list(wrapper.children):
+            if getattr(child, "name", None) is None and not str(child).strip():
+                continue
+            if getattr(child, "name", None) == "h1":
+                break
+            if getattr(child, "name", None) == "div" and child.find("img"):
+                child.decompose()
+
+        hero_fragment = BeautifulSoup(hero_html, "html.parser")
+        h1 = wrapper.find("h1")
+        if h1:
+            for element in reversed(hero_fragment.contents):
+                h1.insert_before(element)
+        else:
+            wrapper.insert(0, hero_fragment)
+
+        html_content = str(soup)
+    except Exception:
+        # Fallback: insert after wrapper start if parsing fails
+        import re
         insert_pattern = r'(<div class="blog-content-module">)'
         html_content = re.sub(insert_pattern, f'\\1\n{hero_html}', html_content, count=1)
     
     article['html_content'] = html_content
     
+    return article
+
+
+def _post_process_article(article: Dict, research_pack: Dict) -> Dict:
+    """Clean final article after editor rewrites to enforce banned-phrase removal,
+    meta description length, and cap keyword density without extra LLM calls."""
+    banned = load_config("brand").get("anti_generic_requirements", {}).get("banned_openers", [])
+    if not banned:
+        banned = [
+            "Many families", "As we age", "In today's world", "It's no secret that",
+            "When it comes to", "There's no doubt that", "In recent years",
+            "As we all know", "For many people", "It goes without saying", "In this article"
+        ]
+
+    def remove_banned_phrases(text: str) -> str:
+        for phrase in banned:
+            text = re.sub(rf"\b{re.escape(phrase)}\b", "Families", text, flags=re.IGNORECASE)
+        return text
+
+    def unwrap_lists(text: str) -> str:
+        text = re.sub(r"<p>([^<]*?)(<ol[^>]*>.*?</ol>)</p>", r"<p>\1</p>\n\2", text, flags=re.IGNORECASE | re.DOTALL)
+        text = re.sub(r"<p>([^<]*?)(<ul[^>]*>.*?</ul>)</p>", r"<p>\1</p>\n\2", text, flags=re.IGNORECASE | re.DOTALL)
+        return text
+
+    def sanitize_sources(text: str) -> str:
+        text = re.sub(r"\(Source:[^)]+\)", "", text, flags=re.IGNORECASE)
+        text = re.sub(r"<span[^>]*>[^<]*source:[^<]*</span>", "", text, flags=re.IGNORECASE)
+        text = re.sub(r"Source:\s*<a[^>]+>.*?</a>", "", text, flags=re.IGNORECASE | re.DOTALL)
+        text = re.sub(r"\(.*?source:.*?\)", "", text, flags=re.IGNORECASE | re.DOTALL)
+        text = re.sub(r"Source:\s*[^.<]+(?:\.\s*|$)", "", text, flags=re.IGNORECASE)
+        return text
+
+    def clamp_keyword_density(text: str, keyword: str, market_name: str, max_pct: float = 2.5) -> str:
+        if not keyword:
+            return text
+        plain = re.sub(r"<[^>]+>", " ", text)
+        words = [w for w in plain.split() if w.strip()]
+        if not words:
+            return text
+        max_occ = int((max_pct / 100.0) * len(words))
+        if max_occ < 1:
+            max_occ = 1
+        pattern = re.compile(re.escape(keyword), re.IGNORECASE)
+        matches = list(pattern.finditer(text))
+        if len(matches) <= max_occ:
+            return text
+        keep = matches[:max_occ]
+        drop = matches[max_occ:]
+        repl = f"{market_name} care"
+        # Replace from end to preserve earlier placements
+        for m in reversed(drop):
+            text = text[:m.start()] + repl + text[m.end():]
+        return text
+
+    def enforce_meta_description(metadata: Dict, market_name: str, primary_keyword: str) -> None:
+        meta_desc = metadata.get("meta_description", "") or ""
+        if 150 <= len(meta_desc) <= 160:
+            return
+        template = (
+            f"{market_name} {primary_keyword.lower()} guide: use local services, annual care reviews, "
+            f"and practical steps to keep aging in place safe this year."
+        )
+        if len(template) < 150:
+            template += " Learn how to schedule assessments, use tax credits, and improve winter safety."
+        if len(template) > 160:
+            template = template[:157].rsplit(" ", 1)[0].rstrip(".,;:") + "."
+        metadata["meta_description"] = template
+
+    html = article.get("html_content", "")
+    primary_keyword = article.get("primary_keyword") or article.get("metadata", {}).get("primary_keyword", "")
+    market_name = article.get("market_name", "")
+
+    html = sanitize_sources(html)
+    html = unwrap_lists(html)
+    html = remove_banned_phrases(html)
+    html = clamp_keyword_density(html, primary_keyword, market_name, max_pct=2.5)
+    html = remove_banned_phrases(html)  # second pass in case replacements reintroduced patterns
+
+    article["html_content"] = html
+
+    # Meta description enforcement
+    metadata = article.get("metadata", {})
+    enforce_meta_description(metadata, market_name, primary_keyword or market_name)
+    article["metadata"] = metadata
+
     return article

@@ -60,6 +60,12 @@ TRUSTED_DOMAINS = {
     "www.ramq.gouv.qc.ca",
 }
 
+FALLBACK_LINKS = {
+    "https://www.quebec.ca/en/health/finding-a-resource/clsc": (
+        "https://www.quebec.ca/en/health/finding-a-resource"
+    ),
+}
+
 
 class EditorQAAgent(BaseAgent):
     """Agent responsible for editorial quality, reader engagement, and compliance."""
@@ -623,9 +629,11 @@ Return ONLY the HTML, no commentary or explanation."""
         return content
 
     async def _validate_and_fix_links(
-        self, 
-        html_content: str, 
-        market_name: str
+        self,
+        html_content: str,
+        market_name: str,
+        *,
+        skip_trusted_domains: bool = True
     ) -> Tuple[str, Dict]:
         """Validate all external links in HTML and remove broken ones.
         
@@ -636,20 +644,30 @@ Return ONLY the HTML, no commentary or explanation."""
         Returns:
             Tuple[str, Dict]: (cleaned HTML, validation report)
         """
+        cleaned_html = html_content
+
+        # Replace known broken URLs with stable fallbacks
+        fallback_applied = []
+        for old_url, new_url in FALLBACK_LINKS.items():
+            if old_url in cleaned_html:
+                cleaned_html = cleaned_html.replace(old_url, new_url)
+                fallback_applied.append({"from": old_url, "to": new_url})
+
         # Extract all links from HTML
         link_pattern = r'<a\s+[^>]*href=["\']([^"\']+)["\'][^>]*>([^<]*)</a>'
-        matches = re.findall(link_pattern, html_content, re.IGNORECASE)
-        
+        matches = re.findall(link_pattern, cleaned_html, re.IGNORECASE)
+
         report = {
             "total_links": len(matches),
             "valid_links": [],
             "broken_links": [],
             "broken_links_removed": 0,
-            "thekey_links_trusted": []
+            "thekey_links_trusted": [],
+            "fallback_links": fallback_applied,
         }
         
         if not matches:
-            return html_content, report
+            return cleaned_html, report
         
         # Check each link
         links_to_validate = []
@@ -669,7 +687,9 @@ Return ONLY the HTML, no commentary or explanation."""
             try:
                 parsed = urlparse(url)
                 domain = parsed.netloc.lower()
-                if domain in TRUSTED_DOMAINS or any(domain.endswith(f".{td}") for td in TRUSTED_DOMAINS):
+                if skip_trusted_domains and (
+                    domain in TRUSTED_DOMAINS or any(domain.endswith(f".{td}") for td in TRUSTED_DOMAINS)
+                ):
                     report["valid_links"].append(url)
                     continue
             except Exception:
@@ -693,7 +713,6 @@ Return ONLY the HTML, no commentary or explanation."""
                     })
         
         # Remove broken links from HTML (convert to plain text)
-        cleaned_html = html_content
         for broken in report["broken_links"]:
             url = broken["url"]
             text = broken["text"]

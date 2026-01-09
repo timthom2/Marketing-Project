@@ -22,6 +22,7 @@ Automatically generates 8 Brightspot-ready HTML articles weekly (one per market)
 - ✅ **Anti-Duplicate Content**: TF-IDF + embedding similarity gates with rewrite loops
 - ✅ **Canadian-First**: Mandated Canadian spelling, healthcare context, local sources
 - ✅ **Email Notifications**: Success, error, and similarity alerts (provider-agnostic SMTP)
+- ✅ **GM Review Portal**: Market-specific review links with auto-rewrite processing
 - ✅ **Cost-Conscious**: Token tracking, caching, model routing optimization
 - ✅ **Automated Retention**: 12-month output archive with auto-zipping
 
@@ -109,6 +110,12 @@ Edit `config/markets.yaml` to:
 - Update keyword pools
 - Modify location URLs
 - Add local domain filters
+
+### Reviewers Configuration
+
+Edit `config/reviewers.yaml` to:
+- Map each market to its GM name/email
+- Enable GM-specific review links and automated rewrites
 
 ### Brand Configuration
 

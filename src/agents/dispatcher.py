@@ -30,7 +30,7 @@ class DispatcherAgent(BaseAgent):
         """
         return await self.dispatch(articles=articles, run_summary=run_summary)
 
-    async def dispatch(self, articles: List[Dict], run_summary: Dict) -> bool:
+    async def dispatch(self, articles: List[Dict], run_summary: Dict, send_email: bool = True) -> bool:
         """
         Save all output artifacts to disk and send email (if configured).
         Returns True if files saved successfully AND email sent (when enabled).
@@ -95,6 +95,10 @@ class DispatcherAgent(BaseAgent):
         send_mode = os.getenv("EMAIL_SEND_MODE", "send").strip().lower()
         smtp_host = os.getenv("SMTP_HOST", "").strip()
         email_to = os.getenv("EMAIL_TO", "").strip()
+
+        if not send_email:
+            self.log_info("Review mode active → Skipping email send (files saved).")
+            return True
 
         if send_mode in ("off", "disabled", "no", "false"):
             self.log_info("EMAIL_SEND_MODE=off → Skipping email send (files saved).")

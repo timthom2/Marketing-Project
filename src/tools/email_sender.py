@@ -26,7 +26,8 @@ class EmailSender:
         body: str,
         to_addresses: Optional[List[str]] = None,
         attachments: Optional[List[Path]] = None,
-        html: bool = False
+        html: bool = False,
+        reply_to: Optional[str] = None
     ) -> bool:
         """Send email via SMTP.
 
@@ -36,6 +37,7 @@ class EmailSender:
             to_addresses: List of recipient addresses (default from config)
             attachments: List of file paths to attach
             html: Whether body is HTML
+            reply_to: Optional reply-to address
 
         Returns:
             bool: True if sent successfully
@@ -57,6 +59,8 @@ class EmailSender:
         message["From"] = formataddr(("TheKey Content Bot", self.config["from"]))
         message["To"] = ", ".join(to_addresses)
         message["Date"] = formatdate(localtime=True)
+        if reply_to:
+            message["Reply-To"] = reply_to
         
         if html:
             message.add_alternative(body, subtype="html")
@@ -85,12 +89,18 @@ class EmailSender:
         
         # Send via SMTP
         try:
+            use_tls = self.config.get("use_tls", False)
+            start_tls = self.config.get("start_tls", False)
             async with aiosmtplib.SMTP(
                 hostname=self.config["host"],
                 port=self.config["port"],
-                use_tls=True
+                use_tls=use_tls,
+                start_tls=start_tls
             ) as smtp:
-                await smtp.login(self.config["user"], self.config["pass"])
+                if start_tls and not use_tls:
+                    await smtp.starttls()
+                if self.config.get("user") and self.config.get("pass"):
+                    await smtp.login(self.config["user"], self.config["pass"])
                 await smtp.send_message(message)
             
             logger.info(f"Email sent successfully to {', '.join(to_addresses)}")
@@ -155,6 +165,66 @@ All files saved to: {output_dir}
 TheKey Canada SEO Content Bot
 System-generated email - do not reply"""
         
+        return subject, body
+
+    def build_review_request_email(
+        self,
+        run_date: str,
+        market_name: str,
+        article_title: str,
+        review_url: str,
+        deadline_at: Optional[str] = None
+    ) -> tuple:
+        """Build review request email for a GM."""
+        subject = f"Review Needed: {market_name} Article — {run_date}"
+        deadline_text = f"\nReview Deadline: {deadline_at}" if deadline_at else ""
+
+        body = f"""Review Needed — {market_name}
+
+Article: {article_title}
+Run Date: {run_date}{deadline_text}
+
+Please review and submit feedback here:
+{review_url}
+
+Notes:
+- Use the form for approve/revise.
+- Do not include PHI or sensitive personal data.
+
+— TheKey Content Bot
+"""
+
+        return subject, body
+
+    def build_review_reminder_email(
+        self,
+        run_date: str,
+        market_name: str,
+        article_title: str,
+        review_url: str,
+        deadline_at: Optional[str] = None,
+        reminder_count: int = 0
+    ) -> tuple:
+        """Build reminder email for pending GM reviews."""
+        reminder_label = f"Reminder {reminder_count}" if reminder_count else "Reminder"
+        subject = f"{reminder_label}: {market_name} Review — {run_date}"
+        deadline_text = f"\nReview Deadline: {deadline_at}" if deadline_at else ""
+
+        body = f"""Pending Review — {market_name}
+
+Article: {article_title}
+Run Date: {run_date}{deadline_text}
+
+Please complete your review here:
+{review_url}
+
+Notes:
+- Use the form for approve/revise.
+- Do not include PHI or sensitive personal data.
+
+— TheKey Content Bot
+"""
+
         return subject, body
 
     def build_error_email(

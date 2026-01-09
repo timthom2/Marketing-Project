@@ -1,0 +1,10 @@
+[Unit]
+Description=TheKey Review Processor Timer
+
+[Timer]
+OnBootSec=5m
+OnUnitActiveSec=10m
+Unit=thekey-review-processor.service
+
+[Install]
+WantedBy=timers.target

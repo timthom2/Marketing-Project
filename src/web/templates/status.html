@@ -1,0 +1,36 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="card">
+  <div class="label">Review Status</div>
+  <div class="title">{{ market_name }}</div>
+  <div class="meta">
+    <span><strong>Run ID:</strong> {{ run_id }}</span>
+    <span><strong>Article:</strong> {{ article_title }}</span>
+  </div>
+  <div class="divider"></div>
+
+  {% if status == "approved" %}
+    <div class="pill success">Approved</div>
+  {% elif status == "auto_approved_due_to_deadline" %}
+    <div class="pill success">Auto-approved due to deadline</div>
+  {% elif status == "rewritten" %}
+    <div class="pill success">Rewritten and queued</div>
+  {% elif status == "submitted" %}
+    <div class="pill">Feedback submitted</div>
+  {% else %}
+    <div class="pill danger">Pending review</div>
+  {% endif %}
+
+  <div class="divider"></div>
+  <p class="meta"><strong>Decision:</strong> {{ decision or "Not set" }}</p>
+  <p class="meta"><strong>Submitted:</strong> {{ submitted_at or "-" }}</p>
+  <p class="meta"><strong>Processed:</strong> {{ processed_at or "-" }}</p>
+  {% if last_error %}
+    <p class="meta" style="color: var(--danger);"><strong>Note:</strong> {{ last_error }}</p>
+  {% endif %}
+
+  <div class="actions">
+    <a class="button" href="/review/{{ token }}">Back to article</a>
+  </div>
+</div>
+{% endblock %}

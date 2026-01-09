@@ -23,6 +23,8 @@ class ImageSelectorAgent(BaseAgent):
     Called sequentially by coordinator after QA to ensure unique images per market.
     """
 
+    MIN_RELEVANCE_SCORE = 5
+
     # Class-level tracking of used image IDs to prevent duplicates across markets
     _used_image_ids: set = set()
     _used_images_file = Path("logs/used_images.json")
@@ -132,6 +134,13 @@ class ImageSelectorAgent(BaseAgent):
         # Sort by relevance score and select best
         scored_images.sort(key=lambda x: x["relevance_score"], reverse=True)
         best_image = scored_images[0]
+
+        if best_image.get("relevance_score", 0) < self.MIN_RELEVANCE_SCORE:
+            self.log_warning(
+                f"Top image score {best_image.get('relevance_score', 0)} below threshold "
+                f"({self.MIN_RELEVANCE_SCORE}); using curated fallback."
+            )
+            return self._get_fallback_image(market_name)
 
         # Mark selected image as used to prevent reuse in other markets
         if best_image.get("id"):

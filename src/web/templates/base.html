@@ -1,0 +1,283 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>{{ title if title else "TheKey Review Portal" }}</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Source+Sans+3:wght@300;400;600;700&family=Spectral:wght@400;600;700&display=swap" rel="stylesheet" />
+  <style>
+    :root {
+      --everest: #06262D;
+      --gold: #D1B886;
+      --light-gold: #F0EEDC;
+      --cream: #F6F4E8;
+      --ink: #1E293B;
+      --muted: #475569;
+      --success: #0F766E;
+      --danger: #B91C1C;
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      font-family: "Source Sans 3", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      color: var(--ink);
+      background:
+        radial-gradient(800px 400px at 10% -10%, rgba(209, 184, 134, 0.20), transparent 60%),
+        radial-gradient(900px 500px at 90% 10%, rgba(6, 38, 45, 0.08), transparent 60%),
+        var(--cream);
+      min-height: 100vh;
+    }
+
+    header {
+      padding: 24px 32px;
+      border-bottom: 1px solid rgba(15, 23, 42, 0.08);
+      background: rgba(246, 244, 232, 0.8);
+      backdrop-filter: blur(6px);
+    }
+
+    header .brand {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    header .mark {
+      width: 36px;
+      height: 36px;
+      border-radius: 8px;
+      background: var(--everest);
+      color: var(--gold);
+      display: grid;
+      place-items: center;
+      font-weight: 700;
+      font-family: "Spectral", serif;
+      letter-spacing: 0.5px;
+    }
+
+    header h1 {
+      margin: 0;
+      font-size: 20px;
+      font-family: "Spectral", serif;
+      color: var(--everest);
+      font-weight: 700;
+    }
+
+    main {
+      padding: 32px;
+      max-width: 1180px;
+      margin: 0 auto;
+    }
+
+    .card {
+      background: #fff;
+      border-radius: 16px;
+      box-shadow: 0 20px 50px rgba(15, 23, 42, 0.08);
+      padding: 28px;
+      border: 1px solid rgba(148, 163, 184, 0.2);
+    }
+
+    .grid {
+      display: grid;
+      grid-template-columns: 1.1fr 0.9fr;
+      gap: 24px;
+    }
+
+    .pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 6px 12px;
+      border-radius: 999px;
+      font-size: 13px;
+      font-weight: 600;
+      background: rgba(6, 38, 45, 0.08);
+      color: var(--everest);
+    }
+
+    .pill.success { background: rgba(15, 118, 110, 0.12); color: var(--success); }
+    .pill.danger { background: rgba(185, 28, 28, 0.12); color: var(--danger); }
+
+    .label {
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      font-size: 12px;
+      font-weight: 700;
+      color: var(--muted);
+    }
+
+    .title {
+      font-size: 26px;
+      font-family: "Spectral", serif;
+      margin: 6px 0 12px;
+      color: var(--everest);
+    }
+
+    .meta {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 12px 18px;
+      color: var(--muted);
+      font-size: 14px;
+    }
+
+    .preview {
+      border-radius: 12px;
+      overflow: hidden;
+      border: 1px solid rgba(148, 163, 184, 0.3);
+      background: #fff;
+      height: 560px;
+    }
+
+    .preview iframe {
+      width: 100%;
+      height: 100%;
+      border: none;
+    }
+
+    textarea,
+    select,
+    input {
+      width: 100%;
+      border-radius: 10px;
+      border: 1px solid rgba(148, 163, 184, 0.4);
+      padding: 12px 14px;
+      font-size: 15px;
+      font-family: inherit;
+      background: #fff;
+    }
+
+    textarea { min-height: 140px; resize: vertical; }
+
+    .actions {
+      display: flex;
+      gap: 12px;
+      align-items: center;
+      margin-top: 16px;
+    }
+
+    button {
+      border: none;
+      padding: 12px 20px;
+      border-radius: 10px;
+      font-weight: 700;
+      cursor: pointer;
+      background: var(--everest);
+      color: #fff;
+    }
+
+    button.secondary {
+      background: transparent;
+      color: var(--everest);
+      border: 1px solid rgba(6, 38, 45, 0.25);
+    }
+
+    .button {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      padding: 12px 20px;
+      border-radius: 10px;
+      font-weight: 700;
+      text-decoration: none;
+      border: 1px solid rgba(6, 38, 45, 0.25);
+      color: var(--everest);
+      background: transparent;
+    }
+
+    .note {
+      font-size: 13px;
+      color: var(--muted);
+      margin-top: 10px;
+    }
+
+    .preview-toggle {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      flex-wrap: wrap;
+    }
+
+    .image-search {
+      display: flex;
+      gap: 12px;
+      align-items: center;
+      margin-bottom: 16px;
+    }
+
+    .image-search input {
+      flex: 1;
+    }
+
+    .image-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+      gap: 14px;
+      margin: 12px 0 20px;
+    }
+
+    .image-card {
+      display: grid;
+      gap: 8px;
+      padding: 10px;
+      border-radius: 12px;
+      border: 1px solid rgba(148, 163, 184, 0.35);
+      background: #fff;
+      cursor: pointer;
+      transition: border-color 0.2s ease, box-shadow 0.2s ease;
+    }
+
+    .image-card.selected {
+      border-color: var(--everest);
+      box-shadow: 0 8px 18px rgba(6, 38, 45, 0.18);
+    }
+
+    .image-card input {
+      width: auto;
+    }
+
+    .image-card img {
+      width: 100%;
+      height: 120px;
+      object-fit: cover;
+      border-radius: 8px;
+    }
+
+    .image-meta {
+      font-size: 12px;
+      color: var(--muted);
+      display: grid;
+      gap: 4px;
+    }
+
+    .divider {
+      height: 1px;
+      background: rgba(148, 163, 184, 0.3);
+      margin: 20px 0;
+    }
+
+    @media (max-width: 980px) {
+      .grid { grid-template-columns: 1fr; }
+      .preview { height: 420px; }
+      header, main { padding: 20px; }
+      .image-search { flex-direction: column; align-items: stretch; }
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <div class="brand">
+      <div class="mark">TK</div>
+      <div>
+        <h1>TheKey GM Review Portal</h1>
+      </div>
+    </div>
+  </header>
+  <main>
+    {% block content %}{% endblock %}
+  </main>
+</body>
+</html>

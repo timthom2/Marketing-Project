@@ -1,0 +1,27 @@
+version: "1.0"
+
+markets:
+  montreal:
+    gm_name: "Joey Taylor"
+    gm_email: "joey.taylor@thekey.com"
+  toronto:
+    gm_name: "Timon Page"
+    gm_email: "timon.page@thekey.com"
+  oakville:
+    gm_name: "Timon Page"
+    gm_email: "timon.page@thekey.com"
+  winnipeg:
+    gm_name: "Dennis Fancy"
+    gm_email: "dfancy@thekey.com"
+  calgary:
+    gm_name: "Chuck Terlesky"
+    gm_email: "cterlesky@thekey.com"
+  vancouver:
+    gm_name: "Sharon Speirs"
+    gm_email: "sspeirs@thekey.com"
+  surrey:
+    gm_name: "Sharon Speirs"
+    gm_email: "sspeirs@thekey.com"
+  victoria:
+    gm_name: "Sharon Speirs"
+    gm_email: "sspeirs@thekey.com"

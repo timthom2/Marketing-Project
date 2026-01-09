@@ -1,5 +1,6 @@
 """Web discovery tool for finding relevant research sources."""
 import asyncio
+import os
 from typing import Dict, List
 from urllib.parse import urlparse
 
@@ -88,7 +89,8 @@ class WebDiscovery:
         queries = self._build_queries(market, province, week_theme, year)
 
         # STEP 3: Execute searches and collect URLs (only if we need more)
-        if len(all_results) < self.max_pages:
+        skip_search = os.getenv("SKIP_WEB_SEARCH", "").strip().lower() in ("1", "true", "yes", "on")
+        if len(all_results) < self.max_pages and not skip_search:
             for query in queries[:3]:  # Limit to 3 queries to avoid rate limiting
                 try:
                     # Run sync search in executor to not block event loop
@@ -100,6 +102,8 @@ class WebDiscovery:
                 except Exception as e:
                     logger.warning(f"Search failed for query '{query[:50]}...': {e}")
                     continue
+        elif skip_search:
+            logger.info("SKIP_WEB_SEARCH=1 → skipping DuckDuckGo discovery; using priority resources only.")
 
         # Deduplicate and filter by domain policy
         filtered_results = self._filter_and_dedupe(all_results)
