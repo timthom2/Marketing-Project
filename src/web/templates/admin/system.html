@@ -1,0 +1,54 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="admin-nav">
+  <a class="admin-link" href="/admin">Runs</a>
+  <a class="admin-link active" href="/admin/system">System Editor</a>
+  <a class="admin-link" href="/admin/logout">Log out</a>
+</div>
+
+<div class="card">
+  <div class="label">System Editor</div>
+  <div class="title">Config + code updates</div>
+  <p class="note">Edits here change live files. For Python changes, restart the review portal service after saving.</p>
+</div>
+
+{% for category, entries in categories.items() %}
+  <div class="card" style="margin-top: 18px;">
+    <div class="label">{{ category }}</div>
+    <table class="table">
+      <thead>
+        <tr>
+          <th>File</th>
+          <th>Description</th>
+          <th>Path</th>
+          <th>Status</th>
+          <th></th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for entry in entries %}
+          <tr>
+            <td><strong>{{ entry.label }}</strong></td>
+            <td>{{ entry.description }}</td>
+            <td><span class="note">{{ entry.path_display }}</span></td>
+            <td>
+              {% if entry.exists %}
+                <span class="status-badge approved">Available</span>
+              {% else %}
+                <span class="status-badge failed">Missing</span>
+              {% endif %}
+            </td>
+            <td>
+              {% if entry.exists %}
+                <a class="button" href="/admin/system/{{ entry.id }}">Edit</a>
+              {% else %}
+                <span class="note">Not found</span>
+              {% endif %}
+            </td>
+          </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+{% endfor %}
+{% endblock %}

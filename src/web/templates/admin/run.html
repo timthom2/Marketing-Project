@@ -1,0 +1,132 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="admin-nav">
+  <a class="admin-link" href="/admin">Runs</a>
+  <a class="admin-link" href="/admin/system">System Editor</a>
+  <a class="admin-link" href="/admin/logout">Log out</a>
+</div>
+
+<div class="card">
+  <div class="label">Run</div>
+  <div class="title">{{ run_id }}</div>
+  <div class="meta">
+    <span><strong>Status:</strong> {{ state.status }}</span>
+    <span><strong>Created:</strong> {{ state.created_at }}</span>
+    <span><strong>Deadline:</strong> {{ state.deadline_at or "None" }}</span>
+  </div>
+
+  <div class="divider"></div>
+
+  <div class="admin-grid">
+    <div class="admin-kpi">
+      <div class="label">Markets</div>
+      <div class="title">{{ counts.total }}</div>
+    </div>
+    <div class="admin-kpi">
+      <div class="label">Approved</div>
+      <div class="title">{{ counts.approved_total }}</div>
+    </div>
+    <div class="admin-kpi">
+      <div class="label">Pending</div>
+      <div class="title">{{ counts.pending }}</div>
+    </div>
+    <div class="admin-kpi">
+      <div class="label">Submitted</div>
+      <div class="title">{{ counts.submitted }}</div>
+    </div>
+  </div>
+
+  <div class="divider"></div>
+
+  <form method="post" action="/admin/run/{{ run_id }}/deadline">
+    <label class="label" for="deadline_at">Review deadline (ISO)</label>
+    <input id="deadline_at" name="deadline_at" type="text" placeholder="YYYY-MM-DDTHH:MM:SS" value="{{ state.deadline_at or '' }}" />
+    <p class="note">Use ISO format. Leave blank to clear the deadline.</p>
+    <div class="actions">
+      <button type="submit">Update deadline</button>
+    </div>
+  </form>
+</div>
+
+<div class="card" style="margin-top: 20px;">
+  <div class="label">Markets</div>
+  <div class="title">Review status</div>
+  <div class="actions">
+    <form method="post" action="/admin/run/{{ run_id }}/send-reminders">
+      <button class="secondary" type="submit">Send reminders now</button>
+    </form>
+    <a class="button" href="/admin">Back to runs</a>
+  </div>
+
+  {% if markets %}
+    <table class="table">
+      <thead>
+        <tr>
+          <th>Market</th>
+          <th>GM</th>
+          <th>Status</th>
+          <th>Email</th>
+          <th>Review Link</th>
+          <th>Last Reminder</th>
+          <th>Actions</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for market in markets %}
+          <tr>
+            <td>
+              <strong>{{ market.market_name }}</strong><br />
+              <span class="note">{{ market.title }}</span>
+            </td>
+            <td>
+              {{ market.gm_name or "GM" }}<br />
+              <span class="note">{{ market.gm_email }}</span>
+            </td>
+            <td>
+              <span class="status-badge {{ market.status }}">{{ market.status }}</span><br />
+              <span class="note">Decision: {{ market.decision or "-" }}</span>
+            </td>
+            <td>
+              <span class="status-badge {{ market.review_send_status }}">{{ market.review_send_status }}</span><br />
+              <span class="note">Sent: {{ market.review_sent_at or "-" }}</span>
+            </td>
+            <td>
+              {% if market.review_url %}
+                <a href="{{ market.review_url }}" target="_blank" rel="noopener">Open review</a>
+              {% else %}
+                <span class="note">Missing link</span>
+              {% endif %}
+            </td>
+            <td>
+              <span class="note">{{ market.last_reminder_at or "-" }}</span><br />
+              <span class="note">Count: {{ market.reminder_count }}</span>
+            </td>
+            <td>
+              <form method="post" action="/admin/run/{{ run_id }}/market/{{ market.market }}/email">
+                <div class="actions">
+                  <button class="secondary" type="submit" name="kind" value="request">Resend review</button>
+                  <button class="secondary" type="submit" name="kind" value="reminder">Send reminder</button>
+                </div>
+              </form>
+              <form method="post" action="/admin/run/{{ run_id }}/market/{{ market.market }}/status">
+                <div style="height: 8px;"></div>
+                <select name="status">
+                  <option value="pending" {% if market.status == "pending" %}selected{% endif %}>pending</option>
+                  <option value="submitted" {% if market.status == "submitted" %}selected{% endif %}>submitted</option>
+                  <option value="approved" {% if market.status == "approved" %}selected{% endif %}>approved</option>
+                  <option value="rewritten" {% if market.status == "rewritten" %}selected{% endif %}>rewritten</option>
+                  <option value="auto_approved_due_to_deadline" {% if market.status == "auto_approved_due_to_deadline" %}selected{% endif %}>auto approved</option>
+                </select>
+                <div style="height: 8px;"></div>
+                <button type="submit">Update status</button>
+              </form>
+            </td>
+          </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  {% else %}
+    <p class="note">No markets found for this run.</p>
+  {% endif %}
+</div>
+{% endblock %}

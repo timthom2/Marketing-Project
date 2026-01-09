@@ -1,0 +1,67 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="admin-nav">
+  <a class="admin-link active" href="/admin">Runs</a>
+  <a class="admin-link" href="/admin/system">System Editor</a>
+  <a class="admin-link" href="/admin/logout">Log out</a>
+</div>
+
+<div class="admin-grid">
+  <div class="admin-kpi">
+    <div class="label">Runs</div>
+    <div class="title">{{ stats.runs }}</div>
+  </div>
+  <div class="admin-kpi">
+    <div class="label">Markets</div>
+    <div class="title">{{ stats.markets_total }}</div>
+  </div>
+  <div class="admin-kpi">
+    <div class="label">Approved</div>
+    <div class="title">{{ stats.approved_total }}</div>
+  </div>
+  <div class="admin-kpi">
+    <div class="label">Pending</div>
+    <div class="title">{{ stats.pending_total }}</div>
+  </div>
+  <div class="admin-kpi">
+    <div class="label">Submitted</div>
+    <div class="title">{{ stats.submitted_total }}</div>
+  </div>
+</div>
+
+<div class="card" style="margin-top: 20px;">
+  <div class="label">Weekly Runs</div>
+  <div class="title">Review workflow</div>
+
+  {% if runs %}
+    <table class="table">
+      <thead>
+        <tr>
+          <th>Run</th>
+          <th>Created</th>
+          <th>Deadline</th>
+          <th>Status</th>
+          <th>Approved</th>
+          <th>Pending</th>
+          <th>Submitted</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for run in runs %}
+          <tr>
+            <td><a href="/admin/run/{{ run.run_id }}">{{ run.run_id }}</a></td>
+            <td>{{ run.created_at or "-" }}</td>
+            <td>{{ run.deadline_at or "-" }}</td>
+            <td><span class="status-badge {{ run.status }}">{{ run.status }}</span></td>
+            <td>{{ run.approved_total }}/{{ run.markets_total }}</td>
+            <td>{{ run.pending }}</td>
+            <td>{{ run.submitted }}</td>
+          </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  {% else %}
+    <p class="note">No review runs found yet.</p>
+  {% endif %}
+</div>
+{% endblock %}

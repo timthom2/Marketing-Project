@@ -1,0 +1,31 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="admin-nav">
+  <a class="admin-link" href="/admin">Runs</a>
+  <a class="admin-link active" href="/admin/system">System Editor</a>
+  <a class="admin-link" href="/admin/logout">Log out</a>
+</div>
+
+<div class="card">
+  <div class="label">Editing</div>
+  <div class="title">{{ entry.label }}</div>
+  <div class="file-meta">
+    <span><strong>Path:</strong> {{ path_display }}</span>
+    <span><strong>Updated:</strong> {{ last_modified }}</span>
+  </div>
+  <div class="divider"></div>
+  <p class="code-note">After saving Python changes, restart the review portal service to load new code.</p>
+
+  {% if saved %}
+    <p class="note" style="color: var(--success);">Saved successfully.</p>
+  {% endif %}
+
+  <form method="post" action="/admin/system/{{ entry.id }}">
+    <textarea class="editor-textarea" name="content">{{ content }}</textarea>
+    <div class="actions">
+      <button type="submit">Save changes</button>
+      <a class="button" href="/admin/system">Back to files</a>
+    </div>
+  </form>
+</div>
+{% endblock %}

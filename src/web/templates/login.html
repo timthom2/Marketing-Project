@@ -1,0 +1,32 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="card" style="max-width: 520px; margin: 0 auto;">
+  <div class="label">Admin Access</div>
+  <div class="title">Sign in</div>
+  <p class="note">This area is for internal admin workflows.</p>
+
+  {% if error %}
+    <p class="note" style="color: var(--danger);">{{ error }}</p>
+  {% endif %}
+
+  {% if enabled %}
+    <form method="post" action="/admin/login">
+      <input type="hidden" name="next" value="{{ next }}">
+
+      <label class="label" for="username">Username</label>
+      <input id="username" name="username" type="email" placeholder="tt@thekey.com" required />
+
+      <div style="height: 12px;"></div>
+      <label class="label" for="password">Password</label>
+      <input id="password" name="password" type="password" placeholder="••••••••" required />
+
+      <div class="actions">
+        <button type="submit">Sign in</button>
+        <a class="button" href="/">Back</a>
+      </div>
+    </form>
+  {% else %}
+    <p class="note">Admin login is not configured yet. Set ADMIN_USERNAME, ADMIN_PASSWORD, and ADMIN_SESSION_SECRET.</p>
+  {% endif %}
+</div>
+{% endblock %}

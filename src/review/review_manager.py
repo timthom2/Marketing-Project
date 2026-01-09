@@ -126,6 +126,10 @@ def create_review_state(
             "processed_at": None,
             "rewrite_attempts": 0,
             "last_error": None,
+            "review_send_status": "pending",
+            "review_sent_at": None,
+            "review_send_failed_at": None,
+            "review_send_error": None,
             "last_reminder_at": now.isoformat(),
             "reminder_count": 0
         }
@@ -260,6 +264,7 @@ async def send_review_requests(state: Dict, run_summary: Dict) -> List[str]:
     deadline_at = state.get("deadline_at")
 
     tasks = []
+    task_markets: List[str] = []
     recipients: List[str] = []
 
     reply_to = get_env_var("REVIEW_REPLY_TO", "").strip() or None
@@ -291,8 +296,22 @@ async def send_review_requests(state: Dict, run_summary: Dict) -> List[str]:
                 reply_to=reply_to
             )
         )
+        task_markets.append(market)
 
     if tasks:
-        await asyncio.gather(*tasks, return_exceptions=True)
+        results = await asyncio.gather(*tasks, return_exceptions=True)
+        now = datetime.now().isoformat()
+        for market, result in zip(task_markets, results):
+            market_state = state.get("markets", {}).get(market, {})
+            if isinstance(result, Exception) or result is False:
+                market_state["review_send_status"] = "failed"
+                market_state["review_send_failed_at"] = now
+                market_state["review_send_error"] = str(result) if isinstance(result, Exception) else "send_failed"
+            else:
+                market_state["review_send_status"] = "sent"
+                market_state["review_sent_at"] = now
+                market_state["review_send_error"] = None
+            state["markets"][market] = market_state
+        save_review_state(run_id, state)
 
     return recipients
