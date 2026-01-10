@@ -414,6 +414,41 @@ def _load_run_summary(run_id: str) -> dict:
     summary_path = _run_output_dir(run_id) / "run_summary.json"
     return load_json(summary_path) or {}
 
+def _backfill_review_send_status(state: dict, summary: dict) -> bool:
+    if not state or not summary:
+        return False
+
+    recipients = summary.get("review_recipients") or []
+    if not recipients:
+        return False
+
+    recipients_set = {addr.strip().lower() for addr in recipients if addr}
+    if not recipients_set:
+        return False
+
+    sent_at = summary.get("end_time") or state.get("created_at") or datetime.now().isoformat()
+    changed = False
+
+    for market_state in state.get("markets", {}).values():
+        if market_state.get("review_send_status"):
+            continue
+        gm_email = (market_state.get("gm_email") or "").strip().lower()
+        if not gm_email:
+            continue
+        if gm_email in recipients_set:
+            market_state["review_send_status"] = "sent"
+            market_state["review_sent_at"] = sent_at
+            market_state["review_send_error"] = None
+            changed = True
+        else:
+            market_state["review_send_status"] = "pending"
+            changed = True
+
+    if changed and state.get("run_id"):
+        save_review_state(state["run_id"], state)
+
+    return changed
+
 
 def _count_market_statuses(markets: dict) -> dict:
     counts = {
@@ -833,6 +868,7 @@ async def admin_dashboard(request: Request) -> HTMLResponse:
     for run_id, _path in list_review_runs().items():
         state = load_review_state(run_id) or {}
         summary = _load_run_summary(run_id)
+        _backfill_review_send_status(state, summary)
         counts = _count_market_statuses(state.get("markets", {}))
         runs.append({
             "run_id": run_id,
@@ -875,6 +911,7 @@ async def admin_run_detail(request: Request, run_id: str) -> HTMLResponse:
         raise HTTPException(status_code=404, detail="Run not found")
 
     summary = _load_run_summary(run_id)
+    _backfill_review_send_status(state, summary)
     counts = _count_market_statuses(state.get("markets", {}))
 
     markets = []
@@ -908,6 +945,7 @@ async def admin_run_detail(request: Request, run_id: str) -> HTMLResponse:
         "summary": summary,
         "counts": counts,
         "markets": markets,
+        "summary_status": summary.get("status"),
     }
     return templates.TemplateResponse("admin/run.html", context)
 

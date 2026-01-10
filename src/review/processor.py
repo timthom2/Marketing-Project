@@ -434,15 +434,21 @@ async def _finalize_run(run_id: str, state: Dict) -> None:
     attachments = _build_attachments(output_dir, markets)
 
     recipients = _final_recipients()
+    state["final_email_recipients"] = recipients
     if not recipients:
+        state["final_email_status"] = "skipped_no_recipients"
         logger.warning("No final recipients configured; skipping final email send.")
     else:
-        await email_sender.send_email(
+        sent_at = datetime.now().isoformat()
+        result = await email_sender.send_email(
             subject=subject,
             body=body,
             to_addresses=recipients,
             attachments=attachments,
         )
+        state["final_email_sent_at"] = sent_at
+        state["final_email_status"] = "sent" if result else "failed"
+        state["final_email_error"] = None if result else "send_failed"
 
     state["status"] = "finalized"
     state["finalized_at"] = datetime.now().isoformat()

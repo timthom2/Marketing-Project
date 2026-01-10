@@ -10,10 +10,18 @@
   <div class="label">Run</div>
   <div class="title">{{ run_id }}</div>
   <div class="meta">
-    <span><strong>Status:</strong> {{ state.status }}</span>
+    <span><strong>Review status:</strong> {{ state.status }}</span>
+    <span><strong>Run summary:</strong> {{ summary_status or "-" }}</span>
+    <span><strong>Final email:</strong> {{ state.final_email_status or "not_sent" }}</span>
     <span><strong>Created:</strong> {{ state.created_at }}</span>
     <span><strong>Deadline:</strong> {{ state.deadline_at or "None" }}</span>
+    <span><strong>Finalized:</strong> {{ state.finalized_at or "-" }}</span>
+    <span><strong>Final sent:</strong> {{ state.final_email_sent_at or "-" }}</span>
   </div>
+
+  {% if state.final_email_recipients %}
+    <p class="note">Final email recipients: {{ state.final_email_recipients | join(", ") }}</p>
+  {% endif %}
 
   <div class="divider"></div>
 
