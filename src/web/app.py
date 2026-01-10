@@ -924,6 +924,11 @@ async def admin_run_detail(request: Request, run_id: str) -> HTMLResponse:
             "gm_email": market_state.get("gm_email", ""),
             "status": market_state.get("status", "pending"),
             "decision": market_state.get("decision"),
+            "rewrite_attempts": market_state.get("rewrite_attempts", 0),
+            "awaiting_rereview": (
+                market_state.get("status") == "rewritten"
+                and market_state.get("decision") == "revise"
+            ),
             "review_url": market_state.get("review_url"),
             "review_sent_at": market_state.get("review_sent_at") or state.get("created_at"),
             "review_send_status": market_state.get("review_send_status", "pending"),

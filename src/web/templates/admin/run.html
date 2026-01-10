@@ -93,6 +93,13 @@
             <td>
               <span class="status-badge {{ market.status }}">{{ market.status }}</span><br />
               <span class="note">Decision: {{ market.decision or "-" }}</span>
+              {% if market.awaiting_rereview %}
+                <br />
+                <span class="note">Awaiting re-review (round {{ market.rewrite_attempts + 1 }})</span>
+              {% elif market.status == "submitted" and market.decision == "revise" %}
+                <br />
+                <span class="note">Awaiting rewrite</span>
+              {% endif %}
             </td>
             <td>
               <span class="status-badge {{ market.review_send_status }}">{{ market.review_send_status }}</span><br />
