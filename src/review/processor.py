@@ -21,6 +21,8 @@ from utils.config_loader import get_env_var
 from review.review_manager import (
     list_review_runs,
     load_review_state,
+    get_review_schedule,
+    normalize_review_deadline,
     review_deadline_passed,
     update_market_state,
     save_review_state,
@@ -456,18 +458,19 @@ async def _finalize_run(run_id: str, state: Dict) -> None:
 
 
 async def _send_reminders(run_id: str, state: Dict) -> None:
-    try:
-        reminder_hours = int(get_env_var("REVIEW_REMINDER_HOURS", "24"))
-    except ValueError:
-        reminder_hours = 24
-
-    if reminder_hours <= 0:
-        return
-
     output_dir = _run_output_dir(run_id)
     email_sender = EmailSender()
     reply_to = get_env_var("REVIEW_REPLY_TO", "").strip() or None
-    deadline_at = state.get("deadline_at")
+
+    now = datetime.now()
+    if now.weekday() >= 5:
+        return
+
+    reminder_at, deadline_at = get_review_schedule(state)
+    if now < reminder_at:
+        return
+    if now >= deadline_at:
+        return
 
     for market, market_state in state.get("markets", {}).items():
         if market_state.get("status") != "pending":
@@ -476,9 +479,9 @@ async def _send_reminders(run_id: str, state: Dict) -> None:
         if not gm_email:
             continue
 
-        last_reminder = market_state.get("last_reminder_at") or state.get("created_at")
-        hours_since = _hours_since(last_reminder)
-        if hours_since is not None and hours_since < reminder_hours:
+        last_reminder = market_state.get("last_reminder_at")
+        last_reminder_dt = _parse_timestamp(last_reminder) if last_reminder else None
+        if last_reminder_dt and last_reminder_dt >= reminder_at:
             continue
 
         metadata = _load_metadata(output_dir, market)
@@ -487,7 +490,7 @@ async def _send_reminders(run_id: str, state: Dict) -> None:
             market_state.get("market_name", market),
             metadata.get("title", ""),
             market_state.get("review_url", ""),
-            deadline_at=deadline_at,
+            deadline_at=deadline_at.isoformat(),
             reminder_count=market_state.get("reminder_count", 0) + 1
         )
 
@@ -508,6 +511,8 @@ async def process_run(run_id: str) -> None:
     state = load_review_state(run_id)
     if not state:
         return
+
+    normalize_review_deadline(state)
 
     if state.get("status") == "finalized":
         return

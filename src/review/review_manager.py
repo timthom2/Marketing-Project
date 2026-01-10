@@ -3,7 +3,7 @@ from __future__ import annotations
 
 import asyncio
 import secrets
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, time
 from pathlib import Path
 from typing import Dict, Optional, Tuple, List
 
@@ -39,6 +39,52 @@ def load_reviewers_config() -> Dict[str, Dict]:
         return {}
 
     return config.get("markets", {}) or {}
+
+
+def _deadline_mode() -> str:
+    return get_env_var("REVIEW_DEADLINE_MODE", "next_monday").strip().lower()
+
+
+def _parse_state_timestamp(value: Optional[str]) -> Optional[datetime]:
+    if not value:
+        return None
+    try:
+        return datetime.fromisoformat(value)
+    except ValueError:
+        return None
+
+
+def _next_monday_at(reference: datetime, hour: int) -> datetime:
+    days_ahead = (7 - reference.weekday()) % 7
+    if days_ahead == 0:
+        days_ahead = 7
+    target_date = (reference + timedelta(days=days_ahead)).date()
+    return datetime.combine(target_date, time(hour=hour, minute=0, second=0))
+
+
+def get_review_schedule(state: Dict) -> Tuple[datetime, datetime]:
+    created_at = _parse_state_timestamp(state.get("created_at")) or datetime.now()
+    reminder_at = _next_monday_at(created_at, 9)
+    deadline_at = _parse_state_timestamp(state.get("deadline_at"))
+
+    if _deadline_mode() != "hours" or not deadline_at:
+        deadline_at = _next_monday_at(created_at, 17)
+
+    return reminder_at, deadline_at
+
+
+def normalize_review_deadline(state: Dict) -> bool:
+    if not state or _deadline_mode() == "hours":
+        return False
+    _, deadline_at = get_review_schedule(state)
+    deadline_str = deadline_at.isoformat()
+    if state.get("deadline_at") == deadline_str:
+        return False
+    state["deadline_at"] = deadline_str
+    run_id = state.get("run_id")
+    if run_id:
+        save_review_state(run_id, state)
+    return True
 
 
 def load_review_state(run_id: str) -> Optional[Dict]:
@@ -81,8 +127,10 @@ def create_review_state(
 
     now = datetime.now()
     deadline_at = None
-    if deadline_hours is not None:
+    if _deadline_mode() == "hours" and deadline_hours is not None:
         deadline_at = now + timedelta(hours=deadline_hours)
+    else:
+        deadline_at = _next_monday_at(now, 17)
 
     review_state = {
         "run_id": run_id,
@@ -248,14 +296,8 @@ def list_review_runs() -> Dict[str, Path]:
 
 
 def review_deadline_passed(state: Dict) -> bool:
-    deadline_at = state.get("deadline_at")
-    if not deadline_at:
-        return False
-    try:
-        deadline = datetime.fromisoformat(deadline_at)
-    except ValueError:
-        return False
-    return datetime.now() >= deadline
+    _, deadline_at = get_review_schedule(state)
+    return datetime.now() >= deadline_at
 
 
 async def send_review_requests(state: Dict, run_summary: Dict) -> List[str]:
