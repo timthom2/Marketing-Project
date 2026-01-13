@@ -119,11 +119,12 @@ class ResearcherAgent(BaseAgent):
         current_week = self._get_current_week_theme(market_key=market_key)
         week_theme = current_week.get('theme', 'general')
 
-        # Step 1: Discover web sources
+        # Step 1: Discover web sources (with source deduplication)
         sources = await self._discover_sources(
             market_config['name'],
             market_config['province'],
-            week_theme
+            week_theme,
+            market_key=market_key
         )
 
         # Step 2: Fetch and extract content from sources
@@ -273,18 +274,61 @@ class ResearcherAgent(BaseAgent):
         self,
         market: str,
         province: str,
-        week_theme: str
+        week_theme: str,
+        market_key: Optional[str] = None
     ) -> List[Dict]:
-        """Discover relevant web sources."""
+        """Discover relevant web sources, prioritizing new sources over previously used ones.
+        
+        Args:
+            market: Market name (e.g., 'Oakville')
+            province: Province name (e.g., 'Ontario')
+            week_theme: Week theme string
+            market_key: Optional market key for checking source history
+            
+        Returns:
+            List of source dictionaries, with new sources prioritized
+        """
         try:
-            sources = await self.web_discovery.discover_sources(
+            all_sources = await self.web_discovery.discover_sources(
                 market=market,
                 province=province,
                 week_theme=week_theme,
                 year=datetime.now().year
             )
-            self.log_info(f"Discovered {len(sources)} sources for {market}")
-            return sources
+            
+            # Phase 5: Prioritize new sources over previously used ones
+            if market_key and all_sources:
+                used_sources = self.archive.get_used_sources(market_key, days_back=180)
+                
+                # Separate new and used sources
+                new_sources = [s for s in all_sources if s.get('url', '') not in used_sources]
+                used_sources_list = [s for s in all_sources if s.get('url', '') in used_sources]
+                
+                self.log_info(
+                    f"Discovered {len(all_sources)} sources for {market}: "
+                    f"{len(new_sources)} new, {len(used_sources_list)} previously used"
+                )
+                
+                # Prioritize new sources, fallback to used if needed
+                # Use up to 6 sources, preferring new ones
+                if new_sources:
+                    prioritized = new_sources[:6]
+                    if len(prioritized) < 6 and used_sources_list:
+                        # Fill remaining slots with used sources if needed
+                        remaining = 6 - len(prioritized)
+                        prioritized.extend(used_sources_list[:remaining])
+                    return prioritized
+                else:
+                    # No new sources available, use previously used ones
+                    self.log_warning(
+                        f"No new sources found for {market}, using previously used sources"
+                    )
+                    return used_sources_list[:6]
+            else:
+                # No market_key provided or no sources, return as-is
+                self.log_info(f"Discovered {len(all_sources)} sources for {market}")
+                return all_sources[:6] if all_sources else []
+                
         except Exception as e:
             self.log_warning(f"Web discovery failed for {market}: {e}")
             return []
