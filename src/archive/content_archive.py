@@ -326,11 +326,13 @@ class ContentArchive:
         conn = sqlite3.connect(self.db_path)
         cursor = conn.cursor()
         
+        # Group by keyword and order by MAX(used_date) to ensure truly most recent keywords
         cursor.execute("""
-            SELECT DISTINCT keyword
+            SELECT keyword, MAX(used_date) as latest_date
             FROM keywords
             WHERE market = ? AND used_date >= ?
-            ORDER BY used_date DESC
+            GROUP BY keyword
+            ORDER BY latest_date DESC
             LIMIT ?
         """, (market, cutoff_date, count))
         
