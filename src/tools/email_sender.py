@@ -227,6 +227,37 @@ Notes:
 
         return subject, body
 
+    def build_review_rewrite_ready_email(
+        self,
+        run_date: str,
+        market_name: str,
+        article_title: str,
+        review_url: str,
+        deadline_at: Optional[str] = None,
+        rewrite_round: Optional[int] = None,
+    ) -> tuple:
+        """Build rewrite-completed email for a GM."""
+        round_text = f" (Revision {rewrite_round})" if rewrite_round else ""
+        subject = f"Revisions Ready: {market_name} Article{round_text} — {run_date}"
+        deadline_text = f"\nReview Deadline: {deadline_at}" if deadline_at else ""
+
+        body = f"""Revisions Ready — {market_name}{round_text}
+
+Article: {article_title}
+Run Date: {run_date}{deadline_text}
+
+We've applied the requested updates. Please review the revised article and approve if it looks good:
+{review_url}
+
+Notes:
+- Use the form to approve or request additional changes.
+- Do not include PHI or sensitive personal data.
+
+— TheKey Content Bot
+"""
+
+        return subject, body
+
     def build_error_email(
         self,
         run_date: str,

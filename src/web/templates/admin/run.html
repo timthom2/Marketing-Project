@@ -11,6 +11,7 @@
   <div class="title">{{ run_id }}</div>
   <div class="meta">
     <span><strong>Review status:</strong> {{ state.status }}</span>
+    <span><strong>Admin override:</strong> {{ "enabled" if state.admin_override else "off" }}</span>
     <span><strong>Run summary:</strong> {{ summary_status or "-" }}</span>
     <span><strong>Final email:</strong> {{ state.final_email_status or "not_sent" }}</span>
     <span><strong>Created:</strong> {{ state.created_at }}</span>
@@ -54,6 +55,24 @@
       <button type="submit">Update deadline</button>
     </div>
   </form>
+
+  <div class="divider"></div>
+
+  <form method="post" action="/admin/run/{{ run_id }}/override">
+    {% if state.admin_override %}
+      <input type="hidden" name="mode" value="disable" />
+      <div class="actions">
+        <button class="secondary" type="submit">Disable admin override</button>
+      </div>
+      <p class="note">Auto-finalization is paused while override is enabled.</p>
+    {% else %}
+      <input type="hidden" name="mode" value="enable" />
+      <div class="actions">
+        <button class="secondary" type="submit">Enable admin override</button>
+      </div>
+      <p class="note">Allows edits after the deadline; auto-finalization is paused.</p>
+    {% endif %}
+  </form>
 </div>
 
 <div class="card" style="margin-top: 20px;">
@@ -62,6 +81,9 @@
   <div class="actions">
     <form method="post" action="/admin/run/{{ run_id }}/send-reminders">
       <button class="secondary" type="submit">Send reminders now</button>
+    </form>
+    <form method="post" action="/admin/run/{{ run_id }}/final-email">
+      <button class="secondary" type="submit">Resend final package</button>
     </form>
     <a class="button" href="/admin">Back to runs</a>
   </div>

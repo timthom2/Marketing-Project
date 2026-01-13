@@ -42,7 +42,7 @@ def load_reviewers_config() -> Dict[str, Dict]:
 
 
 def _deadline_mode() -> str:
-    return get_env_var("REVIEW_DEADLINE_MODE", "next_monday").strip().lower()
+    return get_env_var("REVIEW_DEADLINE_MODE", "next_friday").strip().lower()
 
 
 def _parse_state_timestamp(value: Optional[str]) -> Optional[datetime]:
@@ -54,21 +54,35 @@ def _parse_state_timestamp(value: Optional[str]) -> Optional[datetime]:
         return None
 
 
-def _next_monday_at(reference: datetime, hour: int) -> datetime:
-    days_ahead = (7 - reference.weekday()) % 7
-    if days_ahead == 0:
-        days_ahead = 7
+def _next_weekday_at(reference: datetime, weekday: int, hour: int, minute: int = 0) -> datetime:
+    days_ahead = (weekday - reference.weekday()) % 7
     target_date = (reference + timedelta(days=days_ahead)).date()
-    return datetime.combine(target_date, time(hour=hour, minute=0, second=0))
+    target = datetime.combine(target_date, time(hour=hour, minute=minute, second=0))
+    if days_ahead == 0 and target <= reference:
+        target = target + timedelta(days=7)
+    return target
+
+
+def _weekly_schedule(created_at: datetime) -> Tuple[datetime, datetime]:
+    mode = _deadline_mode()
+    if mode == "next_monday":
+        reminder_at = _next_weekday_at(created_at, 0, 9)
+        deadline_at = _next_weekday_at(created_at, 0, 17)
+    else:
+        reminder_at = _next_weekday_at(created_at, 4, 9)
+        deadline_at = _next_weekday_at(created_at, 4, 20)
+    return reminder_at, deadline_at
 
 
 def get_review_schedule(state: Dict) -> Tuple[datetime, datetime]:
     created_at = _parse_state_timestamp(state.get("created_at")) or datetime.now()
-    reminder_at = _next_monday_at(created_at, 9)
     deadline_at = _parse_state_timestamp(state.get("deadline_at"))
 
-    if _deadline_mode() != "hours" or not deadline_at:
-        deadline_at = _next_monday_at(created_at, 17)
+    if _deadline_mode() == "hours" and deadline_at:
+        reminder_at, _ = _weekly_schedule(created_at)
+        return reminder_at, deadline_at
+
+    reminder_at, deadline_at = _weekly_schedule(created_at)
 
     return reminder_at, deadline_at
 
@@ -130,7 +144,7 @@ def create_review_state(
     if _deadline_mode() == "hours" and deadline_hours is not None:
         deadline_at = now + timedelta(hours=deadline_hours)
     else:
-        deadline_at = _next_monday_at(now, 17)
+        _, deadline_at = _weekly_schedule(now)
 
     review_state = {
         "run_id": run_id,
@@ -296,6 +310,8 @@ def list_review_runs() -> Dict[str, Path]:
 
 
 def review_deadline_passed(state: Dict) -> bool:
+    if state.get("admin_override"):
+        return False
     _, deadline_at = get_review_schedule(state)
     return datetime.now() >= deadline_at
 

@@ -151,6 +151,9 @@ class DispatcherAgent(BaseAgent):
 
         # Always include run summary
         files.append(output_dir / "run_summary.json")
+        serp_gap_path = output_dir / "serp_gap.json"
+        if serp_gap_path.exists():
+            files.append(serp_gap_path)
 
         # De-duplicate while preserving order
         seen = set()

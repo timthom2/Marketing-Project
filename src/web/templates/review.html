@@ -29,8 +29,10 @@
 
   <div class="card">
     <div class="label">Review Status</div>
-    {% if status == "approved" or status == "rewritten" or status == "auto_approved_due_to_deadline" %}
+    {% if status == "approved" or status == "auto_approved_due_to_deadline" %}
       <div class="pill success">Review complete</div>
+    {% elif status == "rewritten" %}
+      <div class="pill danger">Revisions ready</div>
     {% elif status == "submitted" %}
       <div class="pill">Feedback submitted</div>
     {% else %}
@@ -76,7 +78,7 @@
                      data-photographer="{{ image.photographer }}"
                      data-photographer-url="{{ image.photographer_url }}"
                      data-id="{{ image.id }}" />
-              <img src="{{ image.url_medium or image.url_large or image.url }}" alt="{{ image.alt }}" />
+              <img src="{{ image.proxy_url_medium or image.proxy_url_large or image.proxy_url or image.url_medium or image.url_large or image.url }}" alt="{{ image.alt }}" />
               <div class="image-meta">
                 <div class="image-alt">{{ image.alt }}</div>
                 <div class="image-credit">
@@ -99,8 +101,20 @@
 
       <div id="feedback-group">
         <div style="height: 16px;"></div>
+        <div class="note" style="background: #f8fafc; border-left: 3px solid #cbd5f5; padding: 10px 12px;">
+          <strong>How to request revisions</strong><br />
+          Keep edits focused and cite sources for new claims.
+          <ul style="margin: 8px 0 0 18px;">
+            <li>Reference the section heading you want changed.</li>
+            <li>Limit to 1-3 scoped edits (not a full rewrite).</li>
+            <li>Include a source URL for any new factual claims.</li>
+          </ul>
+          {% if section_titles %}
+            <div style="margin-top: 8px;"><strong>Sections:</strong> {{ section_titles | join(" | ") }}</div>
+          {% endif %}
+        </div>
         <label class="label" for="notes">Feedback</label>
-        <textarea id="notes" name="notes" placeholder="List any changes needed (bullets preferred).">{{ feedback.notes if feedback else "" }}</textarea>
+        <textarea id="notes" name="notes" placeholder="Example: [Winter Risk Map] Add a sentence about X with source https://...">{{ feedback_notes or "" }}</textarea>
         <p class="note">Do not include PHI or sensitive personal data in feedback.</p>
       </div>
 
