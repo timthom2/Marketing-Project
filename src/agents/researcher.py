@@ -381,7 +381,7 @@ Return ONLY valid JSON."""
             ))
 
         # Always add core components
-        research_pack["keywords"] = self._generate_keywords(market_config, week_theme)
+        research_pack["keywords"] = self._generate_keywords(market_config, week_theme, market_key=market_key)
         research_pack["faqs"] = self._generate_faqs(market_config, week_theme)
         research_pack["local_resources"] = self._generate_local_resources(market_config, week_theme)
         research_pack["medical_sources"] = self._generate_medical_sources(market_config, week_theme)
@@ -817,25 +817,71 @@ Return ONLY valid JSON."""
         
         return selected
 
-    def _generate_keywords(self, market_config: Dict, week_theme: str) -> Dict:
-        """Generate contextual keywords based on theme."""
+    def _generate_keywords(self, market_config: Dict, week_theme: str, market_key: Optional[str] = None) -> Dict:
+        """Generate contextual keywords based on theme, avoiding recently used keywords.
+        
+        Args:
+            market_config: Market configuration dict
+            week_theme: Week theme string
+            market_key: Optional market key for checking keyword history
+            
+        Returns:
+            Dict with primary, secondary, and theme_keywords
+        """
         primary_pool = market_config["primary_keyword_pool"]
         secondary_pool = market_config["secondary_keyword_pool"]
 
-        primary = random.choice(primary_pool)
+        # Phase 4: Get recent keywords once to avoid per-keyword DB queries (P2 Fix)
+        recent_keywords = []
+        if market_key:
+            recent_keywords = self.archive.get_recent_keywords(market_key, count=20, days_back=90)
+            self.log_info(f"Found {len(recent_keywords)} recent keywords for {market_key}")
+
+        # Filter primary keywords to avoid recent ones (using cached recent_keywords)
+        filtered_primary_pool = []
+        for keyword in primary_pool:
+            if not market_key or not self.archive.is_keyword_similar_to_recent(
+                market_key, keyword, days_back=90, recent_keywords=recent_keywords
+            ):
+                filtered_primary_pool.append(keyword)
+        
+        # If all primary keywords are filtered out, use original pool with warning
+        if not filtered_primary_pool:
+            self.log_warning(
+                f"All primary keywords filtered for {market_key}. Using original pool."
+            )
+            filtered_primary_pool = primary_pool
+        
+        primary = random.choice(filtered_primary_pool)
 
         theme_keywords = {
             "new_year_care_planning": ["senior care planning", "aging at home", "care plan review", "senior wellness"],
             "winter_safety": ["winter senior safety", "cold weather care", "home heating safety", "falls prevention"],
+            "winter_isolation": ["senior companionship", "elderly social connection", "loneliness prevention", "senior social activities"],
             "valentines_companionship": ["senior companionship", "elderly social connection", "loneliness prevention", "senior social activities"],
             "tax_season_prep": ["home care tax credits", "medical expense deduction", "senior tax planning", "care cost savings"]
         }
 
         theme_specific = theme_keywords.get(week_theme, [])
         available_secondary = secondary_pool + theme_specific
+        
+        # Filter secondary keywords to avoid recent ones (using cached recent_keywords)
+        filtered_secondary = []
+        for keyword in available_secondary:
+            if not market_key or not self.archive.is_keyword_similar_to_recent(
+                market_key, keyword, days_back=90, recent_keywords=recent_keywords
+            ):
+                filtered_secondary.append(keyword)
+        
+        # If too many filtered out, use original pool with warning
+        if len(filtered_secondary) < 4:
+            self.log_warning(
+                f"Too few secondary keywords after filtering for {market_key}. Using original pool."
+            )
+            filtered_secondary = available_secondary
 
         secondary_count = random.randint(4, 6)
-        secondary = random.sample(available_secondary, min(len(available_secondary), secondary_count))
+        secondary = random.sample(filtered_secondary, min(len(filtered_secondary), secondary_count))
 
         return {
             "primary": primary,

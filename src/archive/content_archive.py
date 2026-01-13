@@ -504,7 +504,8 @@ class ContentArchive:
         self,
         market: str,
         candidate_keyword: str,
-        days_back: int = 90
+        days_back: int = 90,
+        recent_keywords: Optional[List[str]] = None
     ) -> bool:
         """Check if a candidate keyword is too similar to recently used keywords.
         
@@ -513,12 +514,16 @@ class ContentArchive:
         Args:
             market: Market key
             candidate_keyword: Keyword to check
-            days_back: Number of days to look back
+            days_back: Number of days to look back (ignored if recent_keywords provided)
+            recent_keywords: Optional pre-fetched list of recent keywords to avoid DB queries
             
         Returns:
             True if keyword is too similar to a recent one
         """
-        recent_keywords = self.get_recent_keywords(market, count=20, days_back=days_back)
+        # P2 Fix: Use provided recent_keywords if available, otherwise fetch
+        if recent_keywords is None:
+            recent_keywords = self.get_recent_keywords(market, count=20, days_back=days_back)
+        
         if not recent_keywords:
             return False
         
