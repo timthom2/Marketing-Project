@@ -252,20 +252,27 @@ class SimilarityChecker:
         
         logger.info(f"Checking {market} article against {len(archived_articles)} archived articles")
         
-        # Extract text from archived articles (we'll need to load HTML from outputs)
-        # For now, use title + keywords as proxy since we don't store full HTML in archive
-        # In production, we could store text snippets or load from outputs directory
+        # P1 Fix: Extract full text from archived articles' HTML content
         archived_texts = []
         archived_metadata = []
         
         for archived in archived_articles:
-            # Build text representation from metadata
-            # Title + keywords give us a good similarity signal
-            title = archived.get("title", "")
-            primary_keyword = archived.get("primary_keyword", "")
-            secondary_keywords = " ".join(archived.get("secondary_keywords", []))
-            combined_text = f"{title} {primary_keyword} {secondary_keywords}"
-            archived_texts.append(combined_text)
+            # Use full HTML content if available, otherwise fall back to metadata
+            archived_html = archived.get("html_content")
+            if archived_html:
+                archived_text = self._extract_text(archived_html)
+            else:
+                # Fallback: use title + keywords if HTML not available (backward compatibility)
+                title = archived.get("title", "")
+                primary_keyword = archived.get("primary_keyword", "")
+                secondary_keywords = " ".join(archived.get("secondary_keywords", []))
+                archived_text = f"{title} {primary_keyword} {secondary_keywords}"
+                logger.warning(
+                    f"Archived article {archived.get('title', '')[:50]} has no HTML content, "
+                    f"using metadata fallback"
+                )
+            
+            archived_texts.append(archived_text)
             archived_metadata.append(archived)
         
         # Add current article text for comparison

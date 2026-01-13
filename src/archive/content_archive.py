@@ -51,10 +51,18 @@ class ContentArchive:
                 week_theme TEXT,
                 slug TEXT,
                 published_date TEXT NOT NULL,  -- ISO format
+                html_content TEXT,  -- Full HTML content for duplicate detection
                 created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
                 UNIQUE(run_id, market)
             )
         """)
+        
+        # Add html_content column if it doesn't exist (migration)
+        try:
+            cursor.execute("ALTER TABLE articles ADD COLUMN html_content TEXT")
+        except sqlite3.OperationalError:
+            # Column already exists, ignore
+            pass
         
         # Keywords table - tracks keyword usage per market
         cursor.execute("""
@@ -113,6 +121,7 @@ class ContentArchive:
         secondary_keywords: List[str],
         week_theme: Optional[str],
         slug: Optional[str],
+        html_content: Optional[str] = None,
         published_date: Optional[str] = None
     ) -> None:
         """Archive a published article.
@@ -126,6 +135,7 @@ class ContentArchive:
             secondary_keywords: List of secondary keywords
             week_theme: Week theme used (e.g., 'winter_safety')
             slug: URL slug
+            html_content: Full HTML content of the article (for duplicate detection)
             published_date: Publication date (ISO format). Defaults to run_id
         """
         if published_date is None:
@@ -135,12 +145,17 @@ class ContentArchive:
         cursor = conn.cursor()
         
         try:
-            # Insert article
+            # P2 Fix: Delete existing keywords/themes/sources for this run_id+market to make idempotent
+            cursor.execute("DELETE FROM keywords WHERE run_id = ? AND market = ?", (run_id, market))
+            cursor.execute("DELETE FROM themes WHERE run_id = ? AND market = ?", (run_id, market))
+            cursor.execute("DELETE FROM sources WHERE run_id = ? AND market = ?", (run_id, market))
+            
+            # Insert or replace article
             cursor.execute("""
                 INSERT OR REPLACE INTO articles 
                 (run_id, market, market_name, title, primary_keyword, secondary_keywords, 
-                 week_theme, slug, published_date)
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+                 week_theme, slug, published_date, html_content)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             """, (
                 run_id,
                 market,
@@ -150,26 +165,27 @@ class ContentArchive:
                 json.dumps(secondary_keywords),
                 week_theme,
                 slug,
-                published_date
+                published_date,
+                html_content
             ))
             
             # Archive primary keyword
             cursor.execute("""
-                INSERT OR IGNORE INTO keywords (market, keyword, used_date, run_id)
+                INSERT INTO keywords (market, keyword, used_date, run_id)
                 VALUES (?, ?, ?, ?)
             """, (market, primary_keyword, published_date, run_id))
             
             # Archive secondary keywords
             for keyword in secondary_keywords:
                 cursor.execute("""
-                    INSERT OR IGNORE INTO keywords (market, keyword, used_date, run_id)
+                    INSERT INTO keywords (market, keyword, used_date, run_id)
                     VALUES (?, ?, ?, ?)
                 """, (market, keyword, published_date, run_id))
             
             # Archive theme
             if week_theme:
                 cursor.execute("""
-                    INSERT OR IGNORE INTO themes (market, week_theme, used_date, run_id)
+                    INSERT INTO themes (market, week_theme, used_date, run_id)
                     VALUES (?, ?, ?, ?)
                 """, (market, week_theme, published_date, run_id))
             
@@ -233,7 +249,7 @@ class ContentArchive:
         
         cursor.execute("""
             SELECT run_id, market, market_name, title, primary_keyword, 
-                   secondary_keywords, week_theme, slug, published_date
+                   secondary_keywords, week_theme, slug, published_date, html_content
             FROM articles
             WHERE market = ? AND published_date >= ?
             ORDER BY published_date DESC
@@ -253,7 +269,8 @@ class ContentArchive:
                 "secondary_keywords": json.loads(row["secondary_keywords"] or "[]"),
                 "week_theme": row["week_theme"],
                 "slug": row["slug"],
-                "published_date": row["published_date"]
+                "published_date": row["published_date"],
+                "html_content": row["html_content"]
             })
         
         return articles

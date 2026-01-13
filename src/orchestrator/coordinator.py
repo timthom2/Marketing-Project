@@ -296,6 +296,7 @@ async def run_weekly() -> Dict:
                         secondary_keywords=metadata.get("secondary_keywords", []),
                         week_theme=week_theme,
                         slug=metadata.get("suggested_slug", ""),
+                        html_content=article.get("html_content", ""),  # P1 Fix: Store full HTML for duplicate detection
                         published_date=run_id
                     )
                     
