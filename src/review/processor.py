@@ -397,15 +397,44 @@ async def _process_market(run_id: str, market: str, state: Dict) -> None:
             metadata["diff_path"] = str(diff_path)
         _save_metadata(output_dir, market, metadata)
 
+        new_attempts = market_state.get("rewrite_attempts", 0) + 1
         update_market_state(run_id, market, {
             "status": "rewritten",
             "processed_at": now,
             "last_error": None,
-            "rewrite_attempts": market_state.get("rewrite_attempts", 0) + 1,
+            "rewrite_attempts": new_attempts,
             "validation": validation,
             "link_validation": link_report,
             "diff_path": str(diff_path) if diff_path else None,
         })
+
+        gm_email = (market_state.get("gm_email") or "").strip()
+        review_url = market_state.get("review_url", "")
+        notice_attempt = market_state.get("rewrite_notice_attempt", 0)
+        if gm_email and review_url and notice_attempt < new_attempts:
+            email_sender = EmailSender()
+            state = load_review_state(run_id) or {}
+            subject, body = email_sender.build_review_rewrite_ready_email(
+                run_id,
+                market_state.get("market_name", market),
+                metadata.get("title", ""),
+                review_url,
+                deadline_at=state.get("deadline_at"),
+                rewrite_round=new_attempts,
+            )
+            reply_to = get_env_var("REVIEW_REPLY_TO", "").strip() or None
+            sent = await email_sender.send_email(
+                subject=subject,
+                body=body,
+                to_addresses=[gm_email],
+                reply_to=reply_to,
+            )
+            update_market_state(run_id, market, {
+                "rewrite_notice_attempt": new_attempts,
+                "rewrite_notice_sent_at": now if sent else None,
+                "rewrite_notice_status": "sent" if sent else "failed",
+                "rewrite_notice_error": None if sent else "send_failed",
+            })
     except Exception as e:
         update_market_state(run_id, market, {
             "last_error": str(e),
@@ -514,7 +543,7 @@ async def process_run(run_id: str) -> None:
 
     normalize_review_deadline(state)
 
-    if state.get("status") == "finalized":
+    if state.get("status") == "finalized" and not state.get("admin_override"):
         return
 
     for market in list(state.get("markets", {}).keys()):
@@ -528,6 +557,9 @@ async def process_run(run_id: str) -> None:
 
     state = load_review_state(run_id)
     if not state:
+        return
+
+    if state.get("admin_override"):
         return
 
     if _all_markets_processed(state) or review_deadline_passed(state):

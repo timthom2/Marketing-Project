@@ -3,7 +3,7 @@ import asyncio
 import os
 from datetime import datetime
 from pathlib import Path
-from typing import Dict
+from typing import Dict, List
 
 from agents.researcher import ResearcherAgent
 from agents.writer import WriterAgent
@@ -12,10 +12,12 @@ from agents.dispatcher import DispatcherAgent
 from agents.image_selector import ImageSelectorAgent
 # Note: ResearcherAgent also imported for reset_story_lead_rotation()
 import re
+from tools.serp_gap_checker import SerpGapChecker
 from utils.config_loader import load_config
 from utils.file_manager import create_output_directory, save_json
 from utils.logger import get_logger
 from review.review_manager import create_review_state, send_review_requests
+from archive.content_archive import ContentArchive
 
 logger = get_logger(__name__)
 
@@ -167,10 +169,33 @@ async def run_weekly() -> Dict:
             for article in final_articles
         ]
 
-        # Step 5: Sequential image selection (after all articles finalized)
+        # Step 5: SERP gap check (optional)
+        serp_gap_checker = SerpGapChecker()
+        serp_gap_summary = {"enabled": serp_gap_checker.enabled}
+        if serp_gap_checker.enabled:
+            logger.info("Step 5: Running SERP gap checks...")
+            checked_at = datetime.now().isoformat()
+            try:
+                serp_gap_payload = await _run_serp_gap_checks(final_articles, serp_gap_checker, output_dir, checked_at)
+                serp_gap_summary.update({
+                    "file": "serp_gap.json",
+                    "checked_at": checked_at,
+                    "result_count": len(serp_gap_payload.get("results", [])),
+                })
+            except Exception as exc:
+                serp_gap_summary.update({
+                    "status": "failed",
+                    "error": str(exc),
+                    "checked_at": checked_at,
+                })
+                logger.warning(f"SERP gap check failed: {exc}")
+        else:
+            logger.info("Step 5: SERP gap checks disabled.")
+
+        # Step 6: Sequential image selection (after all articles finalized)
         # Skip real selection in explore mode to keep runs fast and avoid burning uniqueness pool
         if run_mode == "publish":
-            logger.info("Step 5: Running sequential image selection for all markets...")
+            logger.info("Step 6: Running sequential image selection for all markets...")
             image_selector = ImageSelectorAgent()
             
             for i, article in enumerate(final_articles):
@@ -194,7 +219,7 @@ async def run_weekly() -> Dict:
             
             logger.info(f"Image selection completed for {len(final_articles)} markets")
         else:
-            logger.info("Step 5: RUN_MODE=explore → skipping real image selection; keeping placeholders.")
+            logger.info("Step 6: RUN_MODE=explore → skipping real image selection; keeping placeholders.")
             for i, article in enumerate(final_articles):
                 metadata = article.get("metadata", {})
                 images = metadata.get("images", [])
@@ -207,9 +232,9 @@ async def run_weekly() -> Dict:
                         images[0]["url_large"] = images[0]["url"]
                 final_articles[i]["metadata"] = metadata
 
-        # Step 6: Dispatcher email delivery (or review handoff)
+        # Step 7: Dispatcher email delivery (or review handoff)
         review_mode = os.getenv("REVIEW_MODE", "off").strip().lower() in ("on", "true", "1", "yes")
-        logger.info("Step 6: Dispatching articles and sending email...")
+        logger.info("Step 7: Dispatching articles and sending email...")
         dispatcher = DispatcherAgent()
         run_summary = {
             **run_state,
@@ -218,7 +243,8 @@ async def run_weekly() -> Dict:
             "tone_profile": tone_profile,
             "articles": final_articles,
             "editor_report": editor_report,
-            "uniqueness_report": uniqueness_report
+            "uniqueness_report": uniqueness_report,
+            "serp_gap": serp_gap_summary,
         }
 
         delivery_success = await dispatcher.dispatch(final_articles, run_summary, send_email=not review_mode)
@@ -251,7 +277,47 @@ async def run_weekly() -> Dict:
             except Exception as e:
                 logger.warning(f"Failed to update run_summary.json with review metadata: {e}")
 
-        # Step 7: Finalize
+        # Step 8: Archive articles for duplicate content prevention
+        if run_summary.get("status") in ("completed", "awaiting_review"):
+            logger.info("Step 8: Archiving articles to content archive...")
+            try:
+                archive = ContentArchive()
+                for article in final_articles:
+                    metadata = article.get("metadata", {})
+                    research_pack = research_packs_dict.get(article.get("market_name", ""))
+                    week_theme = research_pack.get("week_theme") if research_pack else None
+                    
+                    archive.archive_article(
+                        run_id=run_id,
+                        market=article.get("market", ""),
+                        market_name=article.get("market_name", ""),
+                        title=article.get("title", ""),
+                        primary_keyword=metadata.get("primary_keyword", ""),
+                        secondary_keywords=metadata.get("secondary_keywords", []),
+                        week_theme=week_theme,
+                        slug=metadata.get("suggested_slug", ""),
+                        html_content=article.get("html_content", ""),  # P1 Fix: Store full HTML for duplicate detection
+                        published_date=run_id
+                    )
+                    
+                    # Archive research sources if available
+                    if research_pack:
+                        source_urls = []
+                        for source in research_pack.get("local_resources", []):
+                            if source.get("url"):
+                                source_urls.append(source["url"])
+                        for source in research_pack.get("medical_sources", []):
+                            if source.get("url"):
+                                source_urls.append(source["url"])
+                        if source_urls:
+                            archive.archive_sources(run_id, article.get("market", ""), source_urls)
+                
+                logger.info(f"✓ Archived {len(final_articles)} articles")
+            except Exception as e:
+                logger.warning(f"Failed to archive articles: {e}")
+                # Don't fail the run if archiving fails
+
+        # Step 9: Finalize
         duration = (datetime.now() - datetime.fromisoformat(run_state["start_time"])).total_seconds()
         run_summary["duration_seconds"] = duration
 
@@ -466,3 +532,72 @@ def _post_process_article(article: Dict, research_pack: Dict) -> Dict:
     article["metadata"] = metadata
 
     return article
+
+
+def _build_serp_query(article: Dict) -> str:
+    primary_keyword = article.get("primary_keyword") or article.get("metadata", {}).get("primary_keyword", "")
+    market_name = article.get("market_name", "") or article.get("market", "")
+    if not primary_keyword:
+        return market_name
+    if market_name and market_name.lower() not in primary_keyword.lower():
+        return f"{market_name} {primary_keyword}"
+    return primary_keyword
+
+
+async def _run_serp_gap_checks(
+    articles: List[Dict],
+    checker: SerpGapChecker,
+    output_dir: Path,
+    checked_at: str,
+) -> Dict:
+    try:
+        concurrency = int(os.getenv("SERP_GAP_CONCURRENCY", "2"))
+    except ValueError:
+        concurrency = 2
+    concurrency = max(1, concurrency)
+    semaphore = asyncio.Semaphore(concurrency)
+
+    async def _check(article: Dict):
+        query = _build_serp_query(article)
+        async with semaphore:
+            try:
+                report = await checker.check(
+                    query,
+                    article.get("html_content", ""),
+                    article.get("market_name", ""),
+                )
+                return article, query, report, None
+            except Exception as exc:
+                return article, query, None, str(exc)
+
+    tasks = [_check(article) for article in articles]
+    results = await asyncio.gather(*tasks)
+
+    serp_results = []
+    for article, query, report, error in results:
+        if report:
+            serp_results.append(report)
+            metadata = article.get("metadata", {})
+            metadata["serp_gap"] = {
+                "query": report["query"],
+                "checked_at": report["checked_at"],
+                "coverage_ratio": report["coverage_ratio"],
+                "missing_topics": report["missing_topics"],
+                "top_results": report["top_results"],
+            }
+            article["metadata"] = metadata
+        else:
+            serp_results.append({
+                "market": article.get("market_name", ""),
+                "query": query,
+                "checked_at": checked_at,
+                "status": "failed" if error else "skipped",
+                "error": error,
+            })
+
+    payload = {
+        "checked_at": checked_at,
+        "results": serp_results,
+    }
+    save_json(payload, output_dir / "serp_gap.json")
+    return payload

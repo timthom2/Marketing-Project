@@ -10,8 +10,9 @@ import re
 from datetime import datetime
 from pathlib import Path
 from typing import Optional, List, Tuple
-from urllib.parse import quote
+from urllib.parse import quote, urlparse
 
+import aiohttp
 from fastapi import FastAPI, Form, HTTPException, Request
 from fastapi.responses import FileResponse, HTMLResponse, RedirectResponse
 from fastapi.templating import Jinja2Templates
@@ -26,7 +27,13 @@ from review.review_manager import (
     save_review_state,
     update_market_state,
 )
-from review.processor import process_run, _build_inline_diff
+from review.processor import (
+    process_run,
+    _build_inline_diff,
+    _build_attachments,
+    _load_articles_for_email,
+    _final_recipients,
+)
 from utils.config_loader import get_env_var
 from utils.file_manager import load_json, save_json
 from tools.email_sender import EmailSender
@@ -321,6 +328,13 @@ ADMIN_EDITABLE_FILES = [
         "description": "Brightspot HTML validation."
     },
     {
+        "id": "tool_serp_gap",
+        "label": "SERP gap checker",
+        "path": "src/tools/serp_gap_checker.py",
+        "category": "Tools",
+        "description": "DuckDuckGo SERP headings vs article coverage."
+    },
+    {
         "id": "tool_pexels",
         "label": "Pexels client",
         "path": "src/tools/pexels_client.py",
@@ -513,6 +527,181 @@ def _load_diff_html(run_id: str, market: str, market_state: dict) -> Optional[st
     if not path.exists():
         return None
     return path.read_text(encoding="utf-8")
+
+
+def _image_proxy_hosts() -> set[str]:
+    raw = get_env_var("IMAGE_PROXY_HOSTS", "images.pexels.com")
+    hosts = {host.strip().lower() for host in raw.split(",") if host.strip()}
+    return hosts or {"images.pexels.com"}
+
+
+def _image_cache_dir() -> Path:
+    cache_dir = _app_root() / "data" / "image_cache"
+    cache_dir.mkdir(parents=True, exist_ok=True)
+    return cache_dir
+
+
+def _image_cache_ttl_seconds() -> Optional[int]:
+    try:
+        hours = int(get_env_var("IMAGE_CACHE_TTL_HOURS", "168"))
+    except ValueError:
+        hours = 168
+    if hours <= 0:
+        return None
+    return hours * 3600
+
+
+def _image_cache_max_bytes() -> int:
+    try:
+        max_bytes = int(get_env_var("IMAGE_CACHE_MAX_BYTES", str(10 * 1024 * 1024)))
+    except ValueError:
+        max_bytes = 10 * 1024 * 1024
+    return max(512 * 1024, max_bytes)
+
+
+def _image_proxy_timeout_seconds() -> int:
+    try:
+        timeout = int(get_env_var("IMAGE_PROXY_TIMEOUT_SECONDS", "12"))
+    except ValueError:
+        timeout = 12
+    return max(3, timeout)
+
+
+def _image_cache_max_age_seconds() -> int:
+    ttl = _image_cache_ttl_seconds()
+    if ttl is None:
+        return 86400
+    return max(300, ttl)
+
+
+def _image_cache_paths(url: str) -> Tuple[Path, Path]:
+    key = hashlib.sha256(url.encode("utf-8")).hexdigest()
+    cache_dir = _image_cache_dir()
+    return cache_dir / f"{key}.bin", cache_dir / f"{key}.json"
+
+
+def _is_cache_fresh(meta: dict) -> bool:
+    ttl = _image_cache_ttl_seconds()
+    if ttl is None:
+        return True
+    fetched_at = meta.get("fetched_at")
+    if not fetched_at:
+        return False
+    try:
+        fetched_at_dt = datetime.fromisoformat(fetched_at)
+    except ValueError:
+        return False
+    age = (datetime.now() - fetched_at_dt).total_seconds()
+    return age <= ttl
+
+
+def _should_proxy_image_url(url: str) -> bool:
+    if not url:
+        return False
+    if url.startswith("/media/image?"):
+        return False
+    parsed = urlparse(url)
+    if parsed.scheme not in ("http", "https"):
+        return False
+    host = (parsed.hostname or "").lower()
+    return host in _image_proxy_hosts()
+
+
+def _proxy_image_url(url: str) -> str:
+    return f"/media/image?url={quote(url, safe='')}"
+
+
+def _proxy_html_images(html_content: str) -> str:
+    try:
+        soup = BeautifulSoup(html_content, "html.parser")
+    except Exception:
+        return html_content
+
+    updated = False
+    for img in soup.find_all("img"):
+        src = (img.get("src") or "").strip()
+        if not src:
+            continue
+        if _should_proxy_image_url(src):
+            img["src"] = _proxy_image_url(src)
+            updated = True
+
+    return str(soup) if updated else html_content
+
+
+def _strip_images_from_html(html_content: str) -> str:
+    try:
+        soup = BeautifulSoup(html_content, "html.parser")
+    except Exception:
+        return html_content
+
+    removed = False
+    for tag in soup.find_all(["img", "picture", "source"]):
+        tag.decompose()
+        removed = True
+
+    return str(soup) if removed else html_content
+
+
+def _attach_proxy_urls(image: dict) -> None:
+    for key, proxy_key in (
+        ("url", "proxy_url"),
+        ("url_large", "proxy_url_large"),
+        ("url_medium", "proxy_url_medium"),
+    ):
+        url = (image.get(key) or "").strip()
+        if url and _should_proxy_image_url(url):
+            image[proxy_key] = _proxy_image_url(url)
+
+
+async def _fetch_and_cache_image(url: str, image_path: Path, meta_path: Path) -> str:
+    timeout = aiohttp.ClientTimeout(total=_image_proxy_timeout_seconds())
+    headers = {
+        "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+        "Accept": "image/avif,image/webp,image/apng,image/*,*/*;q=0.8",
+    }
+    max_bytes = _image_cache_max_bytes()
+    tmp_path = image_path.with_suffix(".tmp")
+
+    async with aiohttp.ClientSession(timeout=timeout) as session:
+        async with session.get(url, headers=headers, allow_redirects=True) as response:
+            if response.status != 200:
+                raise HTTPException(status_code=502, detail="Image fetch failed")
+            content_type = response.headers.get("Content-Type", "").split(";")[0].strip().lower()
+            if not content_type.startswith("image/"):
+                raise HTTPException(status_code=400, detail="Invalid image content type")
+
+            size = 0
+            try:
+                with tmp_path.open("wb") as handle:
+                    async for chunk in response.content.iter_chunked(65536):
+                        size += len(chunk)
+                        if size > max_bytes:
+                            raise HTTPException(status_code=413, detail="Image too large")
+                        handle.write(chunk)
+                tmp_path.replace(image_path)
+            except HTTPException:
+                if tmp_path.exists():
+                    try:
+                        tmp_path.unlink()
+                    except Exception:
+                        pass
+                raise
+            except Exception as exc:
+                if tmp_path.exists():
+                    try:
+                        tmp_path.unlink()
+                    except Exception:
+                        pass
+                raise HTTPException(status_code=502, detail="Image fetch failed") from exc
+
+            meta = {
+                "url": url,
+                "content_type": content_type,
+                "fetched_at": datetime.now().isoformat(),
+            }
+            save_json(meta, meta_path)
+            return content_type
 
 
 def _refresh_diff(run_id: str, market: str, after_html: str) -> Optional[str]:
@@ -974,6 +1163,82 @@ async def admin_update_deadline(
     return RedirectResponse(url=f"/admin/run/{run_id}", status_code=303)
 
 
+@app.post("/admin/run/{run_id}/final-email")
+async def admin_send_final_email(
+    request: Request,
+    run_id: str,
+) -> RedirectResponse:
+    redirect = _require_admin(request)
+    if redirect:
+        return redirect
+
+    state = load_review_state(run_id)
+    if not state:
+        raise HTTPException(status_code=404, detail="Run not found")
+
+    output_dir = _run_output_dir(run_id)
+    markets = list(state.get("markets", {}).keys())
+    if not markets:
+        raise HTTPException(status_code=400, detail="No markets found")
+
+    articles = _load_articles_for_email(output_dir, markets)
+    email_sender = EmailSender()
+    subject, body = email_sender.build_success_email(run_id, articles, output_dir)
+    attachments = _build_attachments(output_dir, markets)
+    recipients = _final_recipients()
+
+    now = datetime.now().isoformat()
+    state["final_email_recipients"] = recipients
+    state["final_email_resend_count"] = state.get("final_email_resend_count", 0) + 1
+    if not recipients:
+        state["final_email_status"] = "skipped_no_recipients"
+        state["final_email_error"] = "no_recipients"
+        state["final_email_sent_at"] = None
+        save_review_state(run_id, state)
+        return RedirectResponse(url=f"/admin/run/{run_id}", status_code=303)
+
+    sent = await email_sender.send_email(
+        subject=subject,
+        body=body,
+        to_addresses=recipients,
+        attachments=attachments,
+    )
+    state["final_email_sent_at"] = now
+    state["final_email_status"] = "sent" if sent else "failed"
+    state["final_email_error"] = None if sent else "send_failed"
+    save_review_state(run_id, state)
+    return RedirectResponse(url=f"/admin/run/{run_id}", status_code=303)
+
+
+@app.post("/admin/run/{run_id}/override")
+async def admin_toggle_override(
+    request: Request,
+    run_id: str,
+    mode: str = Form("enable"),
+) -> RedirectResponse:
+    redirect = _require_admin(request)
+    if redirect:
+        return redirect
+
+    state = load_review_state(run_id)
+    if not state:
+        raise HTTPException(status_code=404, detail="Run not found")
+
+    mode = (mode or "enable").strip().lower()
+    now = datetime.now().isoformat()
+    if mode == "disable":
+        state["admin_override"] = False
+        state["admin_override_cleared_at"] = now
+    else:
+        state["admin_override"] = True
+        state["admin_override_set_at"] = now
+        if state.get("status") == "finalized":
+            state["status"] = "awaiting_reviews"
+
+    save_review_state(run_id, state)
+    return RedirectResponse(url=f"/admin/run/{run_id}", status_code=303)
+
+
 @app.post("/admin/run/{run_id}/market/{market}/status")
 async def admin_update_market_status(
     request: Request,
@@ -1198,6 +1463,36 @@ async def admin_save_file(
     return RedirectResponse(url=f"/admin/system/{file_id}?saved=1", status_code=303)
 
 
+@app.get("/media/image")
+async def proxy_image(url: str) -> FileResponse:
+    if not url:
+        raise HTTPException(status_code=400, detail="Missing url")
+    if not _should_proxy_image_url(url):
+        raise HTTPException(status_code=403, detail="URL not allowed")
+
+    image_path, meta_path = _image_cache_paths(url)
+    meta = load_json(meta_path) or {}
+    if image_path.exists() and meta and _is_cache_fresh(meta):
+        content_type = meta.get("content_type") or "image/jpeg"
+        headers = {"Cache-Control": f"public, max-age={_image_cache_max_age_seconds()}"}
+        return FileResponse(image_path, media_type=content_type, headers=headers)
+
+    if image_path.exists() or meta_path.exists():
+        if not _is_cache_fresh(meta):
+            try:
+                image_path.unlink()
+            except Exception:
+                pass
+            try:
+                meta_path.unlink()
+            except Exception:
+                pass
+
+    content_type = await _fetch_and_cache_image(url, image_path, meta_path)
+    headers = {"Cache-Control": f"public, max-age={_image_cache_max_age_seconds()}"}
+    return FileResponse(image_path, media_type=content_type, headers=headers)
+
+
 @app.get("/review/{token}", response_class=HTMLResponse)
 async def review_page(request: Request, token: str, image_query: Optional[str] = None) -> HTMLResponse:
     match = find_review_by_token(token)
@@ -1212,6 +1507,9 @@ async def review_page(request: Request, token: str, image_query: Optional[str] =
     metadata = _load_article_metadata(run_id, market)
     feedback = _load_feedback(market_state.get("feedback_path"))
     html_content_diff = _load_diff_html(run_id, market, market_state)
+    html_content = _proxy_html_images(html_content)
+    if html_content_diff:
+        html_content_diff = _strip_images_from_html(html_content_diff)
 
     raw_query = (image_query or "").strip()
     search_query = raw_query or _default_image_query(market_name, metadata)
@@ -1248,7 +1546,13 @@ async def review_page(request: Request, token: str, image_query: Optional[str] =
         max_results=6,
         max_to_score=8,
     )
+    for image in image_results:
+        _attach_proxy_urls(image)
     image_validation_note = "AI relevance checks applied to prioritize the best matches." if validation_applied else ""
+
+    feedback_notes = feedback.get("notes", "") if feedback else ""
+    if (market_state.get("status") or "").lower() == "rewritten":
+        feedback_notes = ""
 
     context = {
         "request": request,
@@ -1262,6 +1566,7 @@ async def review_page(request: Request, token: str, image_query: Optional[str] =
         "decision": market_state.get("decision"),
         "submitted_at": market_state.get("submitted_at"),
         "feedback": feedback,
+        "feedback_notes": feedback_notes,
         "html_content": html_content,
         "html_content_diff": html_content_diff,
         "image_query": raw_query,
@@ -1269,6 +1574,7 @@ async def review_page(request: Request, token: str, image_query: Optional[str] =
         "image_validation_note": image_validation_note,
         "image_results": image_results,
         "image_filtered_count": image_filtered_count,
+        "section_titles": context_data.get("main_topics", []),
     }
 
     return templates.TemplateResponse("review.html", context)
