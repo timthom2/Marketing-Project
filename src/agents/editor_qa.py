@@ -262,6 +262,27 @@ class EditorQAAgent(BaseAgent):
         while rewrite_attempt < self.max_rewrites:
             self.log_info(f"Similarity check attempt {rewrite_attempt + 1}/{self.max_rewrites}")
 
+            # Re-run archive check after rewrites to see if issues are resolved
+            if rewrite_attempt > 0:
+                self.log_info("Re-running archive check after rewrites...")
+                archive_failing_markets = set()
+                for draft in drafts_list:
+                    market = draft.get("market", "")
+                    market_name = draft.get("market_name", market)
+                    
+                    archive_report = await self.similarity_checker.check_against_archive(
+                        draft, market, days_back=180
+                    )
+                    archive_reports[market] = archive_report
+                    
+                    if archive_report["status"] != "passed":
+                        failing_matches = archive_report.get("failing_matches", [])
+                        if failing_matches:
+                            archive_failing_markets.add(market)
+                            self.log_warning(
+                                f"  ⚠️ {market_name} still has {len(failing_matches)} archive match(es) after rewrite"
+                            )
+
             # Compute similarity (within-run)
             similarity_report = await self.similarity_checker.check_pairwise(drafts_list)
 
