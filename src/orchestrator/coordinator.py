@@ -17,6 +17,7 @@ from utils.config_loader import load_config
 from utils.file_manager import create_output_directory, save_json
 from utils.logger import get_logger
 from review.review_manager import create_review_state, send_review_requests
+from archive.content_archive import ContentArchive
 
 logger = get_logger(__name__)
 
@@ -276,7 +277,46 @@ async def run_weekly() -> Dict:
             except Exception as e:
                 logger.warning(f"Failed to update run_summary.json with review metadata: {e}")
 
-        # Step 8: Finalize
+        # Step 8: Archive articles for duplicate content prevention
+        if run_summary.get("status") in ("completed", "awaiting_review"):
+            logger.info("Step 8: Archiving articles to content archive...")
+            try:
+                archive = ContentArchive()
+                for article in final_articles:
+                    metadata = article.get("metadata", {})
+                    research_pack = research_packs_dict.get(article.get("market_name", ""))
+                    week_theme = research_pack.get("week_theme") if research_pack else None
+                    
+                    archive.archive_article(
+                        run_id=run_id,
+                        market=article.get("market", ""),
+                        market_name=article.get("market_name", ""),
+                        title=article.get("title", ""),
+                        primary_keyword=metadata.get("primary_keyword", ""),
+                        secondary_keywords=metadata.get("secondary_keywords", []),
+                        week_theme=week_theme,
+                        slug=metadata.get("suggested_slug", ""),
+                        published_date=run_id
+                    )
+                    
+                    # Archive research sources if available
+                    if research_pack:
+                        source_urls = []
+                        for source in research_pack.get("local_resources", []):
+                            if source.get("url"):
+                                source_urls.append(source["url"])
+                        for source in research_pack.get("medical_sources", []):
+                            if source.get("url"):
+                                source_urls.append(source["url"])
+                        if source_urls:
+                            archive.archive_sources(run_id, article.get("market", ""), source_urls)
+                
+                logger.info(f"✓ Archived {len(final_articles)} articles")
+            except Exception as e:
+                logger.warning(f"Failed to archive articles: {e}")
+                # Don't fail the run if archiving fails
+
+        # Step 9: Finalize
         duration = (datetime.now() - datetime.fromisoformat(run_state["start_time"])).total_seconds()
         run_summary["duration_seconds"] = duration
 
