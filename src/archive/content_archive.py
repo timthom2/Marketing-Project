@@ -433,6 +433,56 @@ class ContentArchive:
         
         return count > 0
     
+    def get_theme_usage_count(
+        self,
+        market: str,
+        week_theme: str,
+        days_back: int = 180
+    ) -> int:
+        """Get count of times a theme was used for a market within time window.
+        
+        Args:
+            market: Market key
+            week_theme: Week theme to check
+            days_back: Number of days to look back (default 180 = 6 months)
+            
+        Returns:
+            Number of times theme was used
+        """
+        cutoff_date = (datetime.now() - timedelta(days=days_back)).isoformat()
+        
+        conn = sqlite3.connect(self.db_path)
+        cursor = conn.cursor()
+        
+        cursor.execute("""
+            SELECT COUNT(*) FROM themes
+            WHERE market = ? AND week_theme = ? AND used_date >= ?
+        """, (market, week_theme, cutoff_date))
+        
+        count = cursor.fetchone()[0]
+        conn.close()
+        
+        return count
+    
+    def should_block_theme(
+        self,
+        market: str,
+        week_theme: str,
+        max_uses_in_6_months: int = 3
+    ) -> bool:
+        """Check if a theme should be blocked due to overuse.
+        
+        Args:
+            market: Market key
+            week_theme: Week theme to check
+            max_uses_in_6_months: Maximum allowed uses in 6 months (default 3)
+            
+        Returns:
+            True if theme should be blocked
+        """
+        usage_count = self.get_theme_usage_count(market, week_theme, days_back=180)
+        return usage_count >= max_uses_in_6_months
+    
     def is_keyword_similar_to_recent(
         self,
         market: str,
@@ -465,4 +515,54 @@ class ContentArchive:
                 return True
         
         return False
+    
+    def get_theme_usage_count(
+        self,
+        market: str,
+        week_theme: str,
+        days_back: int = 180
+    ) -> int:
+        """Get count of times a theme was used for a market within time window.
+        
+        Args:
+            market: Market key
+            week_theme: Week theme to check
+            days_back: Number of days to look back (default 180 = 6 months)
+            
+        Returns:
+            Number of times theme was used
+        """
+        cutoff_date = (datetime.now() - timedelta(days=days_back)).isoformat()
+        
+        conn = sqlite3.connect(self.db_path)
+        cursor = conn.cursor()
+        
+        cursor.execute("""
+            SELECT COUNT(*) FROM themes
+            WHERE market = ? AND week_theme = ? AND used_date >= ?
+        """, (market, week_theme, cutoff_date))
+        
+        count = cursor.fetchone()[0]
+        conn.close()
+        
+        return count
+    
+    def should_block_theme(
+        self,
+        market: str,
+        week_theme: str,
+        max_uses_in_6_months: int = 3
+    ) -> bool:
+        """Check if a theme should be blocked due to overuse.
+        
+        Args:
+            market: Market key
+            week_theme: Week theme to check
+            max_uses_in_6_months: Maximum allowed uses in 6 months (default 3)
+            
+        Returns:
+            True if theme should be blocked
+        """
+        usage_count = self.get_theme_usage_count(market, week_theme, days_back=180)
+        return usage_count >= max_uses_in_6_months
 

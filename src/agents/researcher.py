@@ -1,7 +1,7 @@
 """Researcher Agent - Evidence-driven research with web discovery and LLM synthesis."""
 import json
 import random
-from typing import Dict, List
+from typing import Dict, List, Optional
 from datetime import datetime
 
 from agents.base_agent import BaseAgent
@@ -29,6 +29,9 @@ class ResearcherAgent(BaseAgent):
         self.web_fetch_extract = WebFetchExtract()
         # Load vetted claims
         self.claims = self._load_claims()
+        # Import archive for theme variation tracking
+        from archive.content_archive import ContentArchive
+        self.archive = ContentArchive()
 
     @classmethod
     def reset_story_lead_rotation(cls):
@@ -112,8 +115,8 @@ class ResearcherAgent(BaseAgent):
         """
         self.log_info(f"Generating evidence-driven research for {market_config['name']}...")
 
-        # Determine current week theme and context
-        current_week = self._get_current_week_theme()
+        # Determine current week theme and context (with variation tracking)
+        current_week = self._get_current_week_theme(market_key=market_key)
         week_theme = current_week.get('theme', 'general')
 
         # Step 1: Discover web sources
@@ -141,29 +144,130 @@ class ResearcherAgent(BaseAgent):
         self.log_info(f"✓ Evidence-driven research complete for {market_config['name']}")
         return research_pack
 
-    def _get_current_week_theme(self) -> Dict:
-        """Get current week theme from content calendar."""
+    def _get_current_week_theme(self, market_key: Optional[str] = None) -> Dict:
+        """Get current week theme from content calendar with variation tracking.
+        
+        Args:
+            market_key: Optional market key to check theme history for variation
+            
+        Returns:
+            Dict: Week theme configuration, potentially adjusted for variation
+        """
         # Check for WEEK_OVERRIDE environment variable
         import os
         week_override = os.getenv("WEEK_OVERRIDE", "").strip()
         if week_override:
             week_key = f"week_{week_override}"
             if week_key in self.content_calendar["rotation_schedule"]:
-                return self.content_calendar["rotation_schedule"][week_key]
+                base_theme = self.content_calendar["rotation_schedule"][week_key]
+            else:
+                base_theme = self.content_calendar["rotation_schedule"]["week_1"]
+        else:
+            # Calculate based on current date
+            from datetime import date
+            today = date.today()
+            week_of_year = today.isocalendar()[1]
+            
+            # Map to 12-week rotation (updated from 16-week)
+            rotation_week = ((week_of_year - 1) % 12) + 1
+            week_key = f"week_{rotation_week}"
+            
+            base_theme = self.content_calendar["rotation_schedule"].get(
+                week_key, 
+                self.content_calendar["rotation_schedule"]["week_1"]
+            )
         
-        # Calculate based on current date
-        from datetime import date
-        today = date.today()
-        week_of_year = today.isocalendar()[1]
+        # Phase 3: Check theme variation if market is provided
+        if market_key and base_theme.get("theme"):
+            week_theme = base_theme.get("theme")
+            
+            # Check if theme should be blocked (used 3+ times in 6 months)
+            if self.archive.should_block_theme(market_key, week_theme, max_uses_in_6_months=3):
+                self.log_warning(
+                    f"Theme '{week_theme}' blocked for {market_key} (used 3+ times in 6 months). "
+                    f"Using fallback theme."
+                )
+                return self._get_fallback_theme(base_theme)
+            
+            # Check if theme used within 60 days (force different angle)
+            if self.archive.has_recent_theme(market_key, week_theme, days_back=60):
+                self.log_warning(
+                    f"Theme '{week_theme}' used recently for {market_key} (within 60 days). "
+                    f"Using alternative theme to ensure variation."
+                )
+                return self._get_alternative_theme(base_theme, market_key)
+            
+            # Check if theme used within 90 days (warn but allow with different angle)
+            if self.archive.has_recent_theme(market_key, week_theme, days_back=90):
+                self.log_warning(
+                    f"Theme '{week_theme}' used for {market_key} within 90 days. "
+                    f"Article should use significantly different angle."
+                )
+                # Mark theme for different angle in research pack
+                base_theme["_requires_different_angle"] = True
         
-        # Map to 12-week rotation (updated from 16-week)
-        rotation_week = ((week_of_year - 1) % 12) + 1
-        week_key = f"week_{rotation_week}"
+        return base_theme
+    
+    def _get_alternative_theme(self, base_theme: Dict, market_key: str) -> Dict:
+        """Get alternative theme when base theme was recently used.
         
-        return self.content_calendar["rotation_schedule"].get(
-            week_key, 
-            self.content_calendar["rotation_schedule"]["week_1"]
-        )
+        Strategy: Use a semantically different theme from the rotation.
+        
+        Args:
+            base_theme: Original theme configuration
+            market_key: Market key for context
+            
+        Returns:
+            Dict: Alternative theme configuration
+        """
+        # Get themes that are semantically different
+        # For winter themes, prefer non-winter alternatives
+        base_theme_name = base_theme.get("theme", "")
+        
+        # Define theme alternatives (semantically different themes)
+        alternatives = {
+            "winter_safety": ["dementia_awareness", "heart_health", "hospital_to_home"],
+            "winter_isolation": ["dementia_awareness", "heart_health", "parkinsons_awareness"],
+            "dementia_awareness": ["heart_health", "hospital_to_home", "spring_preparation"],
+            "heart_health": ["dementia_awareness", "stroke_awareness", "hospital_to_home"],
+            "hospital_to_home": ["dementia_awareness", "heart_health", "parkinsons_awareness"],
+        }
+        
+        # Try to find alternative theme
+        alt_themes = alternatives.get(base_theme_name, [])
+        recent_themes = self.archive.get_recent_themes(market_key, days_back=90)
+        
+        for alt_theme_name in alt_themes:
+            if alt_theme_name not in recent_themes:
+                # Find week config for this theme
+                for week_key, week_config in self.content_calendar["rotation_schedule"].items():
+                    if week_config.get("theme") == alt_theme_name:
+                        self.log_info(f"Using alternative theme: {alt_theme_name}")
+                        return week_config
+        
+        # Fallback: use a different week from rotation
+        return self._get_fallback_theme(base_theme)
+    
+    def _get_fallback_theme(self, base_theme: Dict) -> Dict:
+        """Get fallback theme when base theme is blocked.
+        
+        Args:
+            base_theme: Original theme configuration
+            
+        Returns:
+            Dict: Fallback theme configuration (typically week_1 or week_4)
+        """
+        # Use a stable, year-round theme as fallback
+        fallback_themes = ["dementia_awareness", "hospital_to_home", "heart_health"]
+        
+        for fallback_name in fallback_themes:
+            for week_key, week_config in self.content_calendar["rotation_schedule"].items():
+                if week_config.get("theme") == fallback_name:
+                    self.log_info(f"Using fallback theme: {fallback_name}")
+                    return week_config
+        
+        # Ultimate fallback: week_1
+        return self.content_calendar["rotation_schedule"]["week_1"]
 
     async def _discover_sources(
         self,
