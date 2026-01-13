@@ -8,6 +8,7 @@ from sklearn.metrics.pairwise import cosine_similarity
 from utils.openai_client import OpenAIClient
 from utils.logger import get_logger
 from utils.config_loader import load_config
+from archive.content_archive import ContentArchive
 
 logger = get_logger(__name__)
 
@@ -18,6 +19,7 @@ class SimilarityChecker:
     def __init__(self):
         self.config = load_config("brightspot_guide")
         self.openai = OpenAIClient()
+        self.archive = ContentArchive()
         
         # Thresholds from requirements
         self.tfidf_threshold = 0.25
@@ -211,4 +213,114 @@ class SimilarityChecker:
         return {
             "tfidf_cosine": round(tfidf_sim, 4),
             "tfidf_pass": tfidf_sim <= self.tfidf_threshold
+        }
+    
+    async def check_against_archive(
+        self,
+        article: Dict,
+        market: str,
+        days_back: int = 180
+    ) -> Dict:
+        """Check article similarity against archived articles for the same market.
+        
+        This prevents duplicate content across different runs by comparing new articles
+        against previously published articles from the archive.
+        
+        Args:
+            article: Article dict with html_content and metadata
+            market: Market key (e.g., 'oakville')
+            days_back: Number of days to look back in archive (default 180 = 6 months)
+            
+        Returns:
+            Dict: Similarity report with status, matches, and failing status
+        """
+        html_content = article.get("html_content", "")
+        article_text = self._extract_text(html_content)
+        
+        # Get archived articles for this market
+        archived_articles = self.archive.get_articles_for_market(market, days_back=days_back)
+        
+        if not archived_articles:
+            logger.info(f"No archived articles found for {market} (last {days_back} days)")
+            return {
+                "status": "passed",
+                "matches": [],
+                "failing_matches": [],
+                "archive_checked": True,
+                "archived_count": 0
+            }
+        
+        logger.info(f"Checking {market} article against {len(archived_articles)} archived articles")
+        
+        # Extract text from archived articles (we'll need to load HTML from outputs)
+        # For now, use title + keywords as proxy since we don't store full HTML in archive
+        # In production, we could store text snippets or load from outputs directory
+        archived_texts = []
+        archived_metadata = []
+        
+        for archived in archived_articles:
+            # Build text representation from metadata
+            # Title + keywords give us a good similarity signal
+            title = archived.get("title", "")
+            primary_keyword = archived.get("primary_keyword", "")
+            secondary_keywords = " ".join(archived.get("secondary_keywords", []))
+            combined_text = f"{title} {primary_keyword} {secondary_keywords}"
+            archived_texts.append(combined_text)
+            archived_metadata.append(archived)
+        
+        # Add current article text for comparison
+        all_texts = [article_text] + archived_texts
+        
+        # Compute TF-IDF similarity
+        tfidf_matrix = self._compute_tfidf_similarity(all_texts)
+        
+        # Compute embedding similarity
+        embedding_matrix = await self._compute_embedding_similarity(all_texts)
+        
+        # Compare current article (index 0) against all archived (indices 1+)
+        matches = []
+        failing_matches = []
+        
+        for i, archived in enumerate(archived_articles, start=1):
+            tfidf_sim = tfidf_matrix[0][i]
+            embed_sim = embedding_matrix[0][i]
+            
+            tfidf_pass = tfidf_sim <= self.tfidf_threshold
+            embed_pass = embed_sim <= self.embedding_threshold
+            pass_gate = tfidf_pass and embed_pass
+            
+            match = {
+                "run_id": archived.get("run_id"),
+                "title": archived.get("title"),
+                "published_date": archived.get("published_date"),
+                "week_theme": archived.get("week_theme"),
+                "primary_keyword": archived.get("primary_keyword"),
+                "tfidf": round(tfidf_sim, 4),
+                "embedding": round(embed_sim, 4),
+                "pass": pass_gate
+            }
+            
+            matches.append(match)
+            
+            if not pass_gate:
+                failing_matches.append(match)
+                logger.warning(
+                    f"High similarity with archived article: {archived.get('title', '')[:50]} "
+                    f"(TF-IDF: {tfidf_sim:.3f}, Embedding: {embed_sim:.3f})"
+                )
+        
+        # Determine overall status
+        all_pass = len(failing_matches) == 0
+        status = "passed" if all_pass else "manual_review_required"
+        
+        return {
+            "status": status,
+            "matches": matches,
+            "failing_matches": failing_matches,
+            "archive_checked": True,
+            "archived_count": len(archived_articles),
+            "thresholds": {
+                "tfidf": self.tfidf_threshold,
+                "embedding": self.embedding_threshold
+            }
         }
