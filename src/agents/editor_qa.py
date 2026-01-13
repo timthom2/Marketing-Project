@@ -318,6 +318,27 @@ class EditorQAAgent(BaseAgent):
         # After max rewrites, proceed best-effort
         if rewrite_attempt >= self.max_rewrites:
             self.log_warning(f"⚠️ Max rewrites ({self.max_rewrites}) reached")
+        
+        # Final archive check after last rewrite (if any rewrites occurred)
+        if rewrite_attempt > 0:
+            self.log_info("Running final archive check after rewrite loop...")
+            archive_failing_markets = set()
+            for draft in drafts_list:
+                market = draft.get("market", "")
+                market_name = draft.get("market_name", market)
+                
+                archive_report = await self.similarity_checker.check_against_archive(
+                    draft, market, days_back=180
+                )
+                archive_reports[market] = archive_report
+                
+                if archive_report["status"] != "passed":
+                    failing_matches = archive_report.get("failing_matches", [])
+                    if failing_matches:
+                        archive_failing_markets.add(market)
+                        self.log_warning(
+                            f"  ⚠️ {market_name} still has {len(failing_matches)} archive match(es) after final rewrite"
+                        )
 
         editor_report["rewrite_attempts"] = rewrite_attempt
         editor_report["archive_reports"] = archive_reports
