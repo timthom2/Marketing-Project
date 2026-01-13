@@ -2,7 +2,7 @@
 import asyncio
 import json
 import re
-from typing import Dict, List, Optional, Tuple
+from typing import Dict, List, Tuple
 from urllib.parse import urlparse
 
 import aiohttp
@@ -215,45 +215,9 @@ class EditorQAAgent(BaseAgent):
             if link_report["valid_links"]:
                 self.log_info(f"  ✓ {len(link_report['valid_links'])} valid link(s) verified")
 
-        # PHASE 4: Cross-Run Archive Check (NEW - Phase 2)
+        # PHASE 4: Similarity Gate with Rewrite Loop
         self.log_info("\n" + "="*60)
-        self.log_info("PHASE 4A: Cross-Run Archive Duplicate Detection")
-        self.log_info("="*60)
-        
-        archive_reports = {}
-        archive_failing_markets = set()
-        
-        for draft in improved_drafts:
-            market = draft.get("market", "")
-            market_name = draft.get("market_name", market)
-            
-            self.log_info(f"Checking {market_name} against archive...")
-            archive_report = await self.similarity_checker.check_against_archive(
-                draft, market, days_back=180
-            )
-            archive_reports[market] = archive_report
-            
-            if archive_report["status"] != "passed":
-                failing_matches = archive_report.get("failing_matches", [])
-                if failing_matches:
-                    archive_failing_markets.add(market)
-                    self.log_warning(
-                        f"  ⚠️ {market_name} has {len(failing_matches)} high-similarity match(es) "
-                        f"with archived articles"
-                    )
-                    for match in failing_matches[:2]:  # Show first 2
-                        self.log_warning(
-                            f"    - {match.get('title', '')[:50]}... "
-                            f"(TF-IDF: {match['tfidf']:.3f}, Embed: {match['embedding']:.3f})"
-                        )
-                else:
-                    self.log_info(f"  ✓ {market_name} passed archive check")
-            else:
-                self.log_info(f"  ✓ {market_name} passed archive check ({archive_report['archived_count']} articles checked)")
-
-        # PHASE 4B: Similarity Gate with Rewrite Loop (Within-Run)
-        self.log_info("\n" + "="*60)
-        self.log_info("PHASE 4B: Within-Run Uniqueness Verification")
+        self.log_info("PHASE 4: Uniqueness Verification")
         self.log_info("="*60)
         
         drafts_list = improved_drafts
@@ -262,55 +226,29 @@ class EditorQAAgent(BaseAgent):
         while rewrite_attempt < self.max_rewrites:
             self.log_info(f"Similarity check attempt {rewrite_attempt + 1}/{self.max_rewrites}")
 
-            # Re-run archive check after rewrites to see if issues are resolved
-            if rewrite_attempt > 0:
-                self.log_info("Re-running archive check after rewrites...")
-                archive_failing_markets = set()
-                for draft in drafts_list:
-                    market = draft.get("market", "")
-                    market_name = draft.get("market_name", market)
-                    
-                    archive_report = await self.similarity_checker.check_against_archive(
-                        draft, market, days_back=180
-                    )
-                    archive_reports[market] = archive_report
-                    
-                    if archive_report["status"] != "passed":
-                        failing_matches = archive_report.get("failing_matches", [])
-                        if failing_matches:
-                            archive_failing_markets.add(market)
-                            self.log_warning(
-                                f"  ⚠️ {market_name} still has {len(failing_matches)} archive match(es) after rewrite"
-                            )
-
-            # Compute similarity (within-run)
+            # Compute similarity
             similarity_report = await self.similarity_checker.check_pairwise(drafts_list)
 
             self.log_info(f"Similarity check completed. Status: {similarity_report['status']}")
 
-            # Combine archive failures with within-run failures
-            within_run_failing = set(similarity_report.get("failing_markets", []))
-            all_failing_markets = archive_failing_markets | within_run_failing
-
-            if similarity_report["status"] == "passed" and not archive_failing_markets:
-                self.log_info("✓ All similarity checks passed (both archive and within-run)")
+            if similarity_report["status"] == "passed":
+                self.log_info("✓ All similarity checks passed")
                 break
 
-            if not all_failing_markets:
+            # Check which markets failed
+            failing_markets = similarity_report.get("failing_markets", [])
+
+            if not failing_markets:
                 self.log_info("✓ All markets unique")
                 editor_report["final_status"] = "passed"
                 return drafts_list, editor_report, similarity_report
 
             # Rewrite failing markets (maintaining editorial quality)
-            self.log_warning(f"Rewriting {len(all_failing_markets)} markets for uniqueness...")
+            self.log_warning(f"Rewriting {len(failing_markets)} markets for uniqueness...")
 
             for i, draft in enumerate(drafts_list):
-                if draft.get("market") in all_failing_markets:
-                    # Pass archive context to rewrite function
-                    archive_context = archive_reports.get(draft.get("market"), {})
-                    rewritten_draft = await self._rewrite_for_uniqueness(
-                        draft, rewrite_attempt, archive_context=archive_context
-                    )
+                if draft.get("market") in failing_markets:
+                    rewritten_draft = await self._rewrite_for_uniqueness(draft, rewrite_attempt)
                     drafts_list[i] = rewritten_draft
 
             rewrite_attempt += 1
@@ -318,40 +256,11 @@ class EditorQAAgent(BaseAgent):
         # After max rewrites, proceed best-effort
         if rewrite_attempt >= self.max_rewrites:
             self.log_warning(f"⚠️ Max rewrites ({self.max_rewrites}) reached")
-        
-        # Final archive check after last rewrite (if any rewrites occurred)
-        if rewrite_attempt > 0:
-            self.log_info("Running final archive check after rewrite loop...")
-            archive_failing_markets = set()
-            for draft in drafts_list:
-                market = draft.get("market", "")
-                market_name = draft.get("market_name", market)
-                
-                archive_report = await self.similarity_checker.check_against_archive(
-                    draft, market, days_back=180
-                )
-                archive_reports[market] = archive_report
-                
-                if archive_report["status"] != "passed":
-                    failing_matches = archive_report.get("failing_matches", [])
-                    if failing_matches:
-                        archive_failing_markets.add(market)
-                        self.log_warning(
-                            f"  ⚠️ {market_name} still has {len(failing_matches)} archive match(es) after final rewrite"
-                        )
 
         editor_report["rewrite_attempts"] = rewrite_attempt
-        editor_report["archive_reports"] = archive_reports
-        
-        # Determine final status based on both archive and within-run checks
-        archive_failed = len(archive_failing_markets) > 0
-        within_run_failed = similarity_report["status"] != "passed"
-        
-        if archive_failed or within_run_failed:
+        if similarity_report["status"] != "passed":
             editor_report["final_status"] = "manual_review_required"
             editor_report["similarity_report"] = similarity_report
-            if archive_failed:
-                editor_report["archive_failing_markets"] = sorted(list(archive_failing_markets))
         else:
             editor_report["final_status"] = "passed"
 
@@ -880,18 +789,12 @@ Return ONLY the HTML, no commentary or explanation."""
         # Convert exceptions to False
         return [r if isinstance(r, bool) else False for r in results]
 
-    async def _rewrite_for_uniqueness(
-        self, 
-        draft: Dict, 
-        attempt: int,
-        archive_context: Optional[Dict] = None
-    ) -> Dict:
+    async def _rewrite_for_uniqueness(self, draft: Dict, attempt: int) -> Dict:
         """Rewrite article to reduce similarity while maintaining editorial quality.
 
         Args:
             draft: Article draft
             attempt: Current rewrite attempt
-            archive_context: Optional archive check results with failing matches
 
         Returns:
             Dict: Rewritten article draft
@@ -903,32 +806,11 @@ Return ONLY the HTML, no commentary or explanation."""
 
         seo_reqs = self.brand_config.get('content_guidelines', {}).get('seo_requirements', {})
         
-        # Build archive context for prompt
-        archive_context_text = ""
-        if archive_context and archive_context.get("failing_matches"):
-            failing_matches = archive_context["failing_matches"]
-            archive_context_text = "\n\n=== RECENT ARTICLES FOR THIS MARKET (AVOID SIMILAR ANGLES) ===\n"
-            archive_context_text += "Your article is too similar to these recently published articles. "
-            archive_context_text += "You MUST use completely different angles, statistics, and structures:\n\n"
-            
-            for match in failing_matches[:3]:  # Show top 3 matches
-                archive_context_text += f"- \"{match.get('title', 'Unknown')}\" "
-                archive_context_text += f"(published {match.get('published_date', '')}) "
-                archive_context_text += f"- Theme: {match.get('week_theme', 'N/A')}\n"
-                archive_context_text += f"  Similarity: TF-IDF {match['tfidf']:.3f}, Embedding {match['embedding']:.3f}\n\n"
-            
-            archive_context_text += "CRITICAL: Do NOT repeat similar:\n"
-            archive_context_text += "- Opening hooks or angles\n"
-            archive_context_text += "- Statistics or data points\n"
-            archive_context_text += "- H2 section structures\n"
-            archive_context_text += "- Local examples or case studies\n"
-            archive_context_text += "- Callout box content\n"
-        
         prompt = f"""Rewrite the following article to make it significantly more unique while MAINTAINING excellent editorial quality and reader engagement.
 
 MARKET: {draft['market_name']}
 PRIMARY KEYWORD: {draft['primary_keyword']}
-{archive_context_text}
+
 CURRENT CONTENT:
 {draft['html_content']}
 
