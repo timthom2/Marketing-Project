@@ -831,16 +831,18 @@ Return ONLY valid JSON."""
         primary_pool = market_config["primary_keyword_pool"]
         secondary_pool = market_config["secondary_keyword_pool"]
 
-        # Phase 4: Get recent keywords to avoid repetition
+        # Phase 4: Get recent keywords once to avoid per-keyword DB queries (P2 Fix)
         recent_keywords = []
         if market_key:
-            recent_keywords = self.archive.get_recent_keywords(market_key, count=10, days_back=90)
+            recent_keywords = self.archive.get_recent_keywords(market_key, count=20, days_back=90)
             self.log_info(f"Found {len(recent_keywords)} recent keywords for {market_key}")
 
-        # Filter primary keywords to avoid recent ones
+        # Filter primary keywords to avoid recent ones (using cached recent_keywords)
         filtered_primary_pool = []
         for keyword in primary_pool:
-            if not market_key or not self.archive.is_keyword_similar_to_recent(market_key, keyword, days_back=90):
+            if not market_key or not self.archive.is_keyword_similar_to_recent(
+                market_key, keyword, days_back=90, recent_keywords=recent_keywords
+            ):
                 filtered_primary_pool.append(keyword)
         
         # If all primary keywords are filtered out, use original pool with warning
@@ -863,10 +865,12 @@ Return ONLY valid JSON."""
         theme_specific = theme_keywords.get(week_theme, [])
         available_secondary = secondary_pool + theme_specific
         
-        # Filter secondary keywords to avoid recent ones
+        # Filter secondary keywords to avoid recent ones (using cached recent_keywords)
         filtered_secondary = []
         for keyword in available_secondary:
-            if not market_key or not self.archive.is_keyword_similar_to_recent(market_key, keyword, days_back=90):
+            if not market_key or not self.archive.is_keyword_similar_to_recent(
+                market_key, keyword, days_back=90, recent_keywords=recent_keywords
+            ):
                 filtered_secondary.append(keyword)
         
         # If too many filtered out, use original pool with warning
