@@ -303,6 +303,11 @@ async def run_weekly() -> Dict:
                     # Archive research sources if available
                     if research_pack:
                         source_urls = []
+                        # Phase 5: Archive web discovery URLs (P2 Fix)
+                        for url in research_pack.get("discovered_sources", []):
+                            if url:
+                                source_urls.append(url)
+                        # Also archive local_resources and medical_sources
                         for source in research_pack.get("local_resources", []):
                             if source.get("url"):
                                 source_urls.append(source["url"])

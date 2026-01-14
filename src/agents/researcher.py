@@ -141,6 +141,11 @@ class ResearcherAgent(BaseAgent):
         research_pack = await self._synthesize_research(
             market_key, market_config, week_theme, current_week, compressed_briefs
         )
+        
+        # Phase 5: Store discovered source URLs in research pack for archiving
+        # This allows coordinator to archive web discovery URLs
+        if sources:
+            research_pack["discovered_sources"] = [s.get("url", "") for s in sources if s.get("url")]
 
         self.log_info(f"✓ Evidence-driven research complete for {market_config['name']}")
         return research_pack
