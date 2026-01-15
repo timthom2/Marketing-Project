@@ -100,12 +100,25 @@ class ContentArchive:
             )
         """)
         
+        # Structure types table - tracks article structure type per market (Phase 6)
+        cursor.execute("""
+            CREATE TABLE IF NOT EXISTS structure_types (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                market TEXT NOT NULL,
+                structure_type TEXT NOT NULL,  -- 'news-driven', 'how-to', 'story-driven', 'standard'
+                used_date TEXT NOT NULL,  -- ISO format
+                run_id TEXT NOT NULL,
+                UNIQUE(market, run_id)
+            )
+        """)
+        
         # Create indexes for fast queries
         cursor.execute("CREATE INDEX IF NOT EXISTS idx_articles_market_date ON articles(market, published_date)")
         cursor.execute("CREATE INDEX IF NOT EXISTS idx_articles_theme ON articles(market, week_theme)")
         cursor.execute("CREATE INDEX IF NOT EXISTS idx_keywords_market_date ON keywords(market, used_date)")
         cursor.execute("CREATE INDEX IF NOT EXISTS idx_themes_market_date ON themes(market, used_date)")
         cursor.execute("CREATE INDEX IF NOT EXISTS idx_sources_market_date ON sources(market, used_date)")
+        cursor.execute("CREATE INDEX IF NOT EXISTS idx_structure_types_market_date ON structure_types(market, used_date)")
         
         conn.commit()
         conn.close()
@@ -588,3 +601,66 @@ class ContentArchive:
         usage_count = self.get_theme_usage_count(market, week_theme, days_back=180)
         return usage_count >= max_uses_in_6_months
 
+
+    def get_last_structure_type(self, market: str, days_back: int = 180) -> Optional[str]:
+        """Get the last structure type used for a market.
+        
+        Args:
+            market: Market key
+            days_back: Number of days to look back
+            
+        Returns:
+            Last structure type used, or None if not found
+        """
+        cutoff_date = (datetime.now() - timedelta(days=days_back)).isoformat()
+        
+        conn = sqlite3.connect(self.db_path)
+        cursor = conn.cursor()
+        
+        cursor.execute("""
+            SELECT structure_type
+            FROM structure_types
+            WHERE market = ? AND used_date >= ?
+            ORDER BY used_date DESC
+            LIMIT 1
+        """, (market, cutoff_date))
+        
+        row = cursor.fetchone()
+        conn.close()
+        
+        return row[0] if row else None
+    
+    def archive_structure_type(
+        self,
+        run_id: str,
+        market: str,
+        structure_type: str
+    ) -> None:
+        """Archive the structure type used for an article.
+        
+        Args:
+            run_id: Run identifier
+            market: Market key
+            structure_type: Structure type used (e.g., 'news-driven', 'how-to', 'story-driven', 'standard')
+        """
+        published_date = run_id
+        conn = sqlite3.connect(self.db_path)
+        cursor = conn.cursor()
+        
+        try:
+            # Delete existing entry for this run_id+market to make idempotent
+            cursor.execute("DELETE FROM structure_types WHERE run_id = ? AND market = ?", (run_id, market))
+            
+            # Insert structure type
+            cursor.execute("""
+                INSERT INTO structure_types (market, structure_type, used_date, run_id)
+                VALUES (?, ?, ?, ?)
+            """, (market, structure_type, published_date, run_id))
+            
+            conn.commit()
+        except Exception as e:
+            conn.rollback()
+            logger.error(f"Failed to archive structure type for {market}: {e}")
+            raise
+        finally:
+            conn.close()

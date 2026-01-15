@@ -23,6 +23,9 @@ class WriterAgent(BaseAgent):
         self.brand_config = load_config("brand")
         self.brightspot_config = load_config("brightspot_guide")
         self.markets_config = load_config("markets")
+        # Import archive for structure variation tracking (Phase 6)
+        from archive.content_archive import ContentArchive
+        self.archive = ContentArchive()
 
     async def run(
         self,
@@ -108,6 +111,9 @@ class WriterAgent(BaseAgent):
             }
         ]
         
+        # Phase 6: Get structure type used (stored during prompt generation)
+        structure_type = getattr(self, '_structure_types', {}).get(market, 'standard')
+        
         # Generate metadata
         metadata = {
             "market": market,
@@ -122,6 +128,7 @@ class WriterAgent(BaseAgent):
             "citations": self._extract_citations(research_pack),
             "images": images,
             "word_count": self._count_words(html_content),
+            "structure_type": structure_type,  # Phase 6: Store structure type for archiving
             "generated_at": datetime.now().isoformat()
         }
         
@@ -223,6 +230,9 @@ class WriterAgent(BaseAgent):
         for link in local_authority_links[:2]:
             local_authority_text += f"\n- {link.get('anchor', '')}: {link.get('url', '')}"
         
+        # Phase 6: Get structure instructions (this also stores structure_type for later)
+        structure_instructions = self._get_structure_instructions(research_pack['market'], assigned_story_lead_type)
+        
         # Build JSON example as a separate string to avoid f-string issues
         json_example = '{"title": "H1 title with primary keyword", "meta_description": "150-160 char SEO description", "include_faqs": false, "internal_links": ["link1", "link2"], "sections": [{"type": "h1", "content": "Title"}, {"type": "deck", "content": "Subheadline"}, {"type": "h2", "content": "Section heading"}, {"type": "content", "content": "Paragraph with evidence"}, {"type": "callout", "title": "Local Hook", "content": "Content"}, {"type": "h2", "content": "What You Can Do This Week"}, {"type": "content", "content": "Checklist"}, {"type": "resources", "content": "Resources"}, {"type": "cta", "content": "CTA", "button_text": "Button", "link": "https://thekey.ca/getting-started"}], "faqs": []}'
         
@@ -290,17 +300,8 @@ MUST INCLUDE:
 
 === CONTENT STRUCTURE ===
 TARGET: 900-1200 words of HIGH-QUALITY, specific content
-REQUIRED SECTIONS:
-1. Compelling H1 with primary keyword
-2. Deck/subheadline that promises value
-3. Opening paragraph using {assigned_story_lead_type} lead type (NO generic openings)
-4. "Why This Matters Now" or news peg section (2-3 paragraphs with vetted statistics)
-5. 3-4 H2 sections (at least ONE from H2 SEEDS above)
-6. Callout box with local hook and citation
-7. "What You Can Do This Week" actionable checklist
-8. Warm, helpful CTA (not salesy)
-9. FAQ section (5 questions)
-10. Medical disclaimer
+
+{structure_instructions}
 
 CRITICAL: Do NOT create a separate "Local Resources" section. Instead, weave local authority links INLINE within relevant paragraphs throughout the article.
 
@@ -900,6 +901,93 @@ Return ONLY valid JSON:
             return markets_config.get("cta_base_url", "")
         return services.get("hospital_to_home", {}).get("url", "")
 
+    def _get_structure_instructions(self, market_key: str, assigned_story_lead_type: str) -> str:
+        """Get structure instructions based on last structure type used (Phase 6).
+        
+        Args:
+            market_key: Market key
+            assigned_story_lead_type: Assigned story lead type
+            
+        Returns:
+            Structure instructions string
+        """
+        # Available structure types
+        structure_types = ['standard', 'news-driven', 'how-to', 'story-driven']
+        
+        # Get last structure type used
+        last_structure = self.archive.get_last_structure_type(market_key, days_back=180)
+        
+        # Rotate to next structure type
+        if last_structure and last_structure in structure_types:
+            current_index = structure_types.index(last_structure)
+            next_index = (current_index + 1) % len(structure_types)
+            structure_type = structure_types[next_index]
+        else:
+            # First time or unknown structure, use standard
+            structure_type = 'standard'
+        
+        # Store structure type for this run (will be archived after article generation)
+        if not hasattr(self, '_structure_types'):
+            self._structure_types = {}
+        self._structure_types[market_key] = structure_type
+        
+        # Generate structure instructions based on type
+        if structure_type == 'news-driven':
+            return """STRUCTURE TYPE: NEWS-DRIVEN
+REQUIRED SECTIONS:
+1. Compelling H1 with primary keyword
+2. Deck/subheadline that promises value
+3. Opening paragraph using {assigned_story_lead_type} lead type with a STATISTIC (NO generic openings)
+4. "Breaking News" or "Why This Matters Now" section (2-3 paragraphs with vetted statistics)
+5. 3-4 H2 sections analyzing the news/trend (at least ONE from H2 SEEDS above)
+6. Callout box with local hook and citation
+7. "What You Can Do This Week" actionable checklist OR "Key Takeaways" box (choose one)
+8. Warm, helpful CTA (not salesy)
+9. FAQ section (3-5 questions, optional if word count > 1100)
+10. Medical disclaimer""".format(assigned_story_lead_type=assigned_story_lead_type)
+        
+        elif structure_type == 'how-to':
+            return """STRUCTURE TYPE: HOW-TO
+REQUIRED SECTIONS:
+1. Compelling H1 with primary keyword (problem-focused)
+2. Deck/subheadline that promises solution
+3. Opening paragraph using {assigned_story_lead_type} lead type introducing the problem
+4. "Why This Matters" section (1-2 paragraphs with vetted statistics)
+5. 3-4 H2 sections with step-by-step guidance (at least ONE from H2 SEEDS above)
+6. Callout box with local hook and citation
+7. "Key Takeaways" box (preferred) OR "What You Can Do This Week" checklist
+8. Warm, helpful CTA (not salesy)
+9. FAQ section (3-5 questions, optional if word count > 1100)
+10. Medical disclaimer""".format(assigned_story_lead_type=assigned_story_lead_type)
+        
+        elif structure_type == 'story-driven':
+            return """STRUCTURE TYPE: STORY-DRIVEN
+REQUIRED SECTIONS:
+1. Compelling H1 with primary keyword
+2. Deck/subheadline that promises value
+3. Opening paragraph using {assigned_story_lead_type} lead type with a NARRATIVE/SCENE (NO generic openings)
+4. "The Story" section (2-3 paragraphs with narrative and vetted statistics)
+5. 3-4 H2 sections extracting lessons and insights (at least ONE from H2 SEEDS above)
+6. Callout box with local hook and citation
+7. "What You Can Do This Week" actionable checklist
+8. Warm, helpful CTA (not salesy)
+9. FAQ section (3-5 questions, optional if word count > 1100)
+10. Medical disclaimer""".format(assigned_story_lead_type=assigned_story_lead_type)
+        
+        else:  # standard
+            return """STRUCTURE TYPE: STANDARD
+REQUIRED SECTIONS:
+1. Compelling H1 with primary keyword
+2. Deck/subheadline that promises value
+3. Opening paragraph using {assigned_story_lead_type} lead type (NO generic openings)
+4. "Why This Matters Now" or news peg section (2-3 paragraphs with vetted statistics)
+5. 3-4 H2 sections (at least ONE from H2 SEEDS above)
+6. Callout box with local hook and citation
+7. "What You Can Do This Week" actionable checklist
+8. Warm, helpful CTA (not salesy)
+9. FAQ section (5 questions)
+10. Medical disclaimer""".format(assigned_story_lead_type=assigned_story_lead_type)
+    
     def _extract_citations(self, research_pack: Dict) -> List[str]:
         """Extract citations from research pack."""
         citations = []
