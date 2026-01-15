@@ -601,3 +601,66 @@ class ContentArchive:
         usage_count = self.get_theme_usage_count(market, week_theme, days_back=180)
         return usage_count >= max_uses_in_6_months
 
+
+    def get_last_structure_type(self, market: str, days_back: int = 180) -> Optional[str]:
+        """Get the last structure type used for a market.
+        
+        Args:
+            market: Market key
+            days_back: Number of days to look back
+            
+        Returns:
+            Last structure type used, or None if not found
+        """
+        cutoff_date = (datetime.now() - timedelta(days=days_back)).isoformat()
+        
+        conn = sqlite3.connect(self.db_path)
+        cursor = conn.cursor()
+        
+        cursor.execute("""
+            SELECT structure_type
+            FROM structure_types
+            WHERE market = ? AND used_date >= ?
+            ORDER BY used_date DESC
+            LIMIT 1
+        """, (market, cutoff_date))
+        
+        row = cursor.fetchone()
+        conn.close()
+        
+        return row[0] if row else None
+    
+    def archive_structure_type(
+        self,
+        run_id: str,
+        market: str,
+        structure_type: str
+    ) -> None:
+        """Archive the structure type used for an article.
+        
+        Args:
+            run_id: Run identifier
+            market: Market key
+            structure_type: Structure type used (e.g., 'news-driven', 'how-to', 'story-driven', 'standard')
+        """
+        published_date = run_id
+        conn = sqlite3.connect(self.db_path)
+        cursor = conn.cursor()
+        
+        try:
+            # Delete existing entry for this run_id+market to make idempotent
+            cursor.execute("DELETE FROM structure_types WHERE run_id = ? AND market = ?", (run_id, market))
+            
+            # Insert structure type
+            cursor.execute("""
+                INSERT INTO structure_types (market, structure_type, used_date, run_id)
+                VALUES (?, ?, ?, ?)
+            """, (market, structure_type, published_date, run_id))
+            
+            conn.commit()
+        except Exception as e:
+            conn.rollback()
+            logger.error(f"Failed to archive structure type for {market}: {e}")
+            raise
+        finally:
+            conn.close()
