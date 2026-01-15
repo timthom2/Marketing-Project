@@ -100,12 +100,25 @@ class ContentArchive:
             )
         """)
         
+        # Structure types table - tracks article structure type per market (Phase 6)
+        cursor.execute("""
+            CREATE TABLE IF NOT EXISTS structure_types (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                market TEXT NOT NULL,
+                structure_type TEXT NOT NULL,  -- 'news-driven', 'how-to', 'story-driven', 'standard'
+                used_date TEXT NOT NULL,  -- ISO format
+                run_id TEXT NOT NULL,
+                UNIQUE(market, run_id)
+            )
+        """)
+        
         # Create indexes for fast queries
         cursor.execute("CREATE INDEX IF NOT EXISTS idx_articles_market_date ON articles(market, published_date)")
         cursor.execute("CREATE INDEX IF NOT EXISTS idx_articles_theme ON articles(market, week_theme)")
         cursor.execute("CREATE INDEX IF NOT EXISTS idx_keywords_market_date ON keywords(market, used_date)")
         cursor.execute("CREATE INDEX IF NOT EXISTS idx_themes_market_date ON themes(market, used_date)")
         cursor.execute("CREATE INDEX IF NOT EXISTS idx_sources_market_date ON sources(market, used_date)")
+        cursor.execute("CREATE INDEX IF NOT EXISTS idx_structure_types_market_date ON structure_types(market, used_date)")
         
         conn.commit()
         conn.close()

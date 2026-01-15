@@ -300,6 +300,11 @@ async def run_weekly() -> Dict:
                         published_date=run_id
                     )
                     
+                    # Phase 6: Archive structure type if available
+                    structure_type = metadata.get("structure_type")
+                    if structure_type:
+                        archive.archive_structure_type(run_id, article.get("market", ""), structure_type)
+                    
                     # Archive research sources if available
                     if research_pack:
                         source_urls = []
