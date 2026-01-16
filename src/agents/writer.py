@@ -113,17 +113,26 @@ class WriterAgent(BaseAgent):
         
         # Phase 6: Get structure type used (stored during prompt generation)
         structure_type = getattr(self, '_structure_types', {}).get(market, 'standard')
+
+        subheadline = ""
+        for section in article_data.get("sections", []):
+            if section.get("type") == "deck":
+                subheadline = (section.get("content") or "").strip()
+                break
         
         # Generate metadata
         metadata = {
             "market": market,
             "market_name": market_name,
             "title": article_data["title"],
+            "subheadline": subheadline,
             "suggested_slug": self._generate_slug(article_data["title"]),
             "meta_title": self._generate_meta_title(article_data["title"]),
             "meta_description": article_data.get("meta_description", ""),
             "primary_keyword": research_pack["keywords"]["primary"],
             "secondary_keywords": research_pack["keywords"]["secondary"],
+            "week_theme": research_pack.get("week_theme", ""),
+            "week_requirements": research_pack.get("week_requirements", []),
             "internal_links": article_data["internal_links"],
             "citations": self._extract_citations(research_pack),
             "images": images,
@@ -137,13 +146,14 @@ class WriterAgent(BaseAgent):
         return {
             "market": market,
             "market_name": market_name,
+            "week_theme": research_pack.get("week_theme", ""),
+            "week_requirements": research_pack.get("week_requirements", []),
             "title": article_data["title"],
             "primary_keyword": research_pack["keywords"]["primary"],
             "html_content": html_content,
             "metadata": metadata,
             "image_filename": f"{market}-hero-pexels.jpg",  # Will be updated by coordinator
-            "html_filename": f"{market}.html",
-            "json_filename": f"{market}.json"
+            "html_filename": f"{market}.html"
         }
 
     async def _generate_article(
@@ -173,6 +183,12 @@ class WriterAgent(BaseAgent):
         must_include_entities = research_pack.get("must_include_entities", [])
         assigned_story_lead_type = research_pack.get("assigned_story_lead_type", "scene")
         local_authority_links = research_pack.get("local_authority_links", [])
+        seasonal_context = (research_pack.get("seasonal_context") or "").strip()
+        target_dates = (research_pack.get("target_dates") or "").strip()
+        week_theme = research_pack.get("week_theme", "")
+        week_theme_description = (research_pack.get("week_theme_description") or "").strip()
+        week_requirements = research_pack.get("week_requirements", [])
+        system_context_mode = (research_pack.get("system_context_mode") or "brief").strip().lower()
         
         # Format story leads for prompt
         story_leads_text = ""
@@ -221,9 +237,20 @@ class WriterAgent(BaseAgent):
         
         # Format H2 seeds
         h2_seeds_text = "\n".join(f"- {h2}" for h2 in h2_seeds[:3]) if h2_seeds else "- None specified"
-        
+
         # Format must-include entities
         entities_text = ", ".join(must_include_entities[:5]) if must_include_entities else "None specified"
+
+        # Format calendar requirements
+        week_requirements_text = "\n".join(f"- {item}" for item in week_requirements) if week_requirements else "- None specified"
+
+        # Theme coverage checklist
+        theme_focus_topics = research_pack.get("theme_focus_topics", [])
+        theme_focus_text = "\n".join(f"- {item}" for item in theme_focus_topics) if theme_focus_topics else "- None specified"
+
+        # Seasonal guidance
+        seasonal_fallback = "Tie the article to the current calendar timing; avoid mentioning other seasons."
+        seasonal_text = seasonal_context if seasonal_context else seasonal_fallback
         
         # Format local authority links for inline use
         local_authority_text = ""
@@ -242,7 +269,12 @@ class WriterAgent(BaseAgent):
 MARKET: {research_pack['market_name']}, {research_pack['province']}
 PRIMARY KEYWORD: {research_pack['keywords']['primary']}
 SECONDARY KEYWORDS: {', '.join(research_pack['keywords']['secondary'][:6])}
-HEALTHCARE CONTEXT: {market_config['healthcare_context']}
+WEEK THEME: {week_theme.replace('_', ' ').title()} — {week_theme_description}
+SEASONAL CONTEXT: {seasonal_text}
+SEASONAL RULE: Do not mention conflicting seasons/months; if the context is year-round, avoid season-specific claims.
+TARGET DATES: {target_dates}
+HEALTHCARE CONTEXT (MENTION BRIEFLY): {market_config['healthcare_context']}
+SYSTEM CONTEXT MODE: {system_context_mode}
 
 === ASSIGNED STORY LEAD TYPE: {assigned_story_lead_type.upper()} ===
 Your opening paragraph MUST use a {assigned_story_lead_type} lead type.
@@ -251,7 +283,7 @@ Use one of these as inspiration:
 
 === NEWS PEGS (MAKE IT TIMELY) ===
 Include at least one of these timely hooks in your article:
-{news_pegs_text if news_pegs_text else "- Reference current season and its relevance to senior care"}
+{news_pegs_text if news_pegs_text else f"- Use the seasonal context: {seasonal_text}"}
 
 === VETTED STATISTICS (USE THESE - DO NOT INVENT) ===
 You MUST include at least 2 of these vetted statistics WITH their source URLs:
@@ -270,13 +302,21 @@ Title: {research_pack['local_hook']['title']}
 Summary: {research_pack['local_hook']['summary']}
 Citation: {research_pack['local_hook'].get('citation', '')}
 
-=== H2 HEADINGS (MUST USE AT LEAST ONE) ===
-You MUST use at least ONE of these city-specific H2 headings in your article:
+=== H2 HEADINGS (THEME-FIRST) ===
+Create 3-5 H2 headings aligned to the weekly theme and seasonal context.
+Optional inspiration (use 0-1 max; avoid system-program headings unless SYSTEM CONTEXT MODE is "full"):
 {h2_seeds_text}
 
-=== MUST-INCLUDE ENTITIES ===
-Your article MUST mention these entities by name:
+=== MUST-INCLUDE ENTITIES (MENTION ONCE) ===
+Mention each of these entities by name at most once.
+If SYSTEM CONTEXT MODE is "brief", group them into a single 1–2 sentence public-care snapshot paragraph and do NOT make them an H2.
 {entities_text}
+
+=== CALENDAR MUST-INCLUDE (NON-NEGOTIABLE) ===
+{week_requirements_text}
+
+=== THEME COVERAGE CHECKLIST (REQUIRED) ===
+{theme_focus_text}
 
 === LOCAL AUTHORITY LINKS (INLINE - NOT IN SEPARATE BLOCK) ===
 Weave these local authority links INLINE within relevant paragraphs (not in a separate resources section):
@@ -288,7 +328,7 @@ MUST INCLUDE:
 - At least TWO vetted statistics with source URLs (from VETTED STATISTICS section above)
 - At least ONE named local program or provincial initiative
 - At least ONE concrete "this week" action for families
-- Reference the provincial healthcare system by name
+- Reference the provincial healthcare system by name once (briefly, no separate section unless SYSTEM CONTEXT MODE is "full")
 - At least TWO inline local authority links (not in a separate block)
 
 === SEO REQUIREMENTS ===
@@ -382,12 +422,20 @@ Return ONLY valid JSON:
                 "faqs": []
             }
 
-        # Enforce FAQ presence using research-pack FAQs as fallback
-        fallback_faqs = research_pack.get("faqs", [])
-        if not article_data.get("faqs"):
-            article_data["faqs"] = fallback_faqs[:5]
+        # Enforce FAQ policy: required for standard, optional for non-standard structures
+        structure_type = getattr(self, '_structure_types', {}).get(research_pack["market"], "standard")
+        include_faqs = article_data.get("include_faqs")
+        if include_faqs is None:
+            include_faqs = structure_type == "standard"
+        elif structure_type == "standard" and include_faqs is False:
+            include_faqs = True
+
+        if include_faqs:
+            fallback_faqs = research_pack.get("faqs", [])
+            article_data["faqs"] = (article_data.get("faqs") or fallback_faqs)[:5]
         else:
-            article_data["faqs"] = article_data.get("faqs", [])[:5]
+            article_data["faqs"] = []
+
         article_data["include_faqs"] = True if article_data.get("faqs") else False
 
         return article_data

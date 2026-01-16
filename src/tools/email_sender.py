@@ -6,6 +6,7 @@ from pathlib import Path
 from typing import List, Dict, Optional, Any
 
 import aiosmtplib
+from bs4 import BeautifulSoup
 from email_validator import validate_email, EmailNotValidError
 
 from utils.logger import get_logger
@@ -130,17 +131,50 @@ class EmailSender:
         
         # Build index table
         table_lines = [
-            "| Market | Title | Primary Keyword | Image | Files |",
-            "|--------|-------|-----------------|-------|-------|"
+            "| Market | Title | Primary Keyword | Image | HTML |",
+            "|--------|-------|-----------------|-------|------|"
         ]
         
         for article in articles:
             table_lines.append(
-                f"| {article['market']} | {article['title']} | "
-                f"{article['primary_keyword']} | {article.get('image_filename', 'N/A')} | "
-                f"{article['html_filename']}, {article['json_filename']} |"
+                f"| {article['market']} | {article.get('title', '')} | "
+                f"{article.get('primary_keyword', '')} | {article.get('image_filename', 'N/A')} | "
+                f"{article.get('html_filename', '')} |"
             )
-        
+
+        # Build copy/paste sections
+        section_lines: List[str] = []
+        for article in articles:
+            metadata = article.get("metadata", {})
+            headline = article.get("title", "")
+            subheadline = metadata.get("subheadline", "")
+            if not headline or not subheadline:
+                html_content = self._load_html_content(article, output_dir)
+                parsed_headline, parsed_subheadline, _ = self._extract_copy_blocks(html_content)
+                if not headline:
+                    headline = parsed_headline
+                if not subheadline:
+                    subheadline = parsed_subheadline
+            image_info = (article.get("metadata", {}).get("images") or [{}])[0]
+            image_url = image_info.get("url") or image_info.get("url_large") or ""
+            image_credit = image_info.get("credit", "")
+            image_filename = article.get("image_filename") or image_info.get("recommended_filename", "N/A")
+            html_filename = article.get("html_filename", "")
+
+            section_lines.append(f"## {article.get('market_name') or article['market']}")
+            section_lines.append(f"Headline:\n{headline or article.get('title', '')}")
+            section_lines.append(f"Subheadline:\n{subheadline or 'N/A'}")
+            if html_filename:
+                section_lines.append(f"Body HTML: see attached {html_filename} (starts after subheadline).")
+            else:
+                section_lines.append("Body HTML: see attached HTML file (starts after subheadline).")
+            section_lines.append(f"Image attachment: {image_filename}")
+            if image_url:
+                section_lines.append(f"Image URL: {image_url}")
+            if image_credit:
+                section_lines.append(f"Image credit: {image_credit}")
+            section_lines.append("")
+
         body = f"""Weekly SEO Content Generation Complete ✅
 
 Run Date: {run_date}
@@ -150,6 +184,10 @@ Articles Generated: {len(articles)}
 
 {chr(10).join(table_lines)}
 
+## Copy/Paste Packets
+
+{chr(10).join(section_lines)}
+
 ## Output Directory
 
 All files saved to: {output_dir}
@@ -157,8 +195,8 @@ All files saved to: {output_dir}
 ## Next Steps
 
 1. Review articles for accuracy
-2. Upload images to Brightspot (replace placeholder URLs)
-3. Publish articles to respective market pages
+2. Upload attached Pexels images to Brightspot (if attachments exceeded size limits, use the ZIP)
+3. Paste headline and subheadline into their fields, then paste the Body HTML below the subheadline
 
 ---
 
@@ -166,6 +204,40 @@ TheKey Canada SEO Content Bot
 System-generated email - do not reply"""
         
         return subject, body
+
+    def _load_html_content(self, article: Dict, output_dir: Path) -> str:
+        html_content = article.get("html_content")
+        if html_content:
+            return html_content
+        html_filename = article.get("html_filename") or f"{article.get('market', 'article')}.html"
+        html_path = output_dir / html_filename
+        if html_path.exists():
+            return html_path.read_text(encoding="utf-8")
+        return ""
+
+    def _extract_copy_blocks(self, html_content: str) -> tuple:
+        if not html_content:
+            return "", "", ""
+
+        soup = BeautifulSoup(html_content, "html.parser")
+        wrapper = soup.find("div", class_="blog-content-module") or soup
+
+        h1_tag = wrapper.find("h1")
+        headline = h1_tag.get_text(" ", strip=True) if h1_tag else ""
+
+        deck_tag = h1_tag.find_next("p") if h1_tag else None
+        subheadline = deck_tag.get_text(" ", strip=True) if deck_tag else ""
+
+        body_html = ""
+        if deck_tag:
+            body_parts = [str(sib) for sib in deck_tag.find_next_siblings() if str(sib).strip()]
+            body_html = "\n".join(body_parts).strip()
+        else:
+            if h1_tag:
+                h1_tag.decompose()
+            body_html = "".join(str(c) for c in wrapper.contents).strip()
+
+        return headline, subheadline, body_html
 
     def build_review_request_email(
         self,
@@ -326,16 +398,16 @@ System-generated email - do not reply"""
         
         # Build index table
         table_lines = [
-            "| Market | Title | Primary Keyword | Image | Files |",
-            "|--------|-------|-----------------|-------|-------|"
+            "| Market | Title | Primary Keyword | Image | HTML |",
+            "|--------|-------|-----------------|-------|------|"
         ]
         
         for article in articles:
             flag = " ⚠️" if article["market"] in failing_markets else ""
             table_lines.append(
-                f"| {article['market']}{flag} | {article['title']} | "
-                f"{article['primary_keyword']} | {article.get('image_filename', 'N/A')} | "
-                f"{article['html_filename']}, {article['json_filename']} |"
+                f"| {article['market']}{flag} | {article.get('title', '')} | "
+                f"{article.get('primary_keyword', '')} | {article.get('image_filename', 'N/A')} | "
+                f"{article.get('html_filename', '')} |"
             )
         
         # Build similarity score table

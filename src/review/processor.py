@@ -57,22 +57,99 @@ def _snapshot_path(run_id: str, market: str) -> Path:
     return _diff_dir(run_id) / f"{market}_before.html"
 
 
+def _load_run_summary(output_dir: Path) -> Dict:
+    summary_path = output_dir / "run_summary.json"
+    return load_json(summary_path) or {}
+
+
+def _find_summary_article(summary: Dict, market: str) -> Optional[Dict]:
+    for article in summary.get("articles", []):
+        if article.get("market") == market:
+            return article
+    return None
+
+
 def _load_html(output_dir: Path, market: str) -> str:
+    summary = _load_run_summary(output_dir)
+    article = _find_summary_article(summary, market) if summary else None
+    html_content = article.get("html_content") if article else ""
+    if html_content:
+        return html_content
     return (output_dir / f"{market}.html").read_text(encoding="utf-8")
 
 
 def _save_html(output_dir: Path, market: str, html: str) -> None:
-    (output_dir / f"{market}.html").write_text(html, encoding="utf-8")
+    summary = _load_run_summary(output_dir)
+    article = _find_summary_article(summary, market) if summary else None
+    if article is not None:
+        article["html_content"] = html
+        save_json(summary, output_dir / "run_summary.json")
+
+    body_html = _strip_to_body_html(html)
+    (output_dir / f"{market}.html").write_text(body_html, encoding="utf-8")
+
+
+def _strip_to_body_html(html_content: str) -> str:
+    """Return HTML that begins after the subheadline (deck) section."""
+    if not html_content:
+        return ""
+
+    try:
+        from bs4 import BeautifulSoup
+        soup = BeautifulSoup(html_content, "html.parser")
+    except Exception:
+        return html_content
+
+    wrapper = soup.find("div", class_="blog-content-module")
+    target = wrapper or soup
+
+    h1_tag = target.find("h1")
+    if not h1_tag:
+        return str(wrapper) if wrapper else html_content
+
+    deck_tag = h1_tag.find_next("p")
+
+    for child in list(target.children):
+        if child == h1_tag:
+            break
+        child.extract()
+
+    h1_tag.extract()
+
+    if deck_tag:
+        deck_tag.extract()
+
+    return str(wrapper) if wrapper else str(soup)
 
 
 def _load_metadata(output_dir: Path, market: str) -> Dict:
     metadata_path = output_dir / f"{market}.json"
-    return load_json(metadata_path) or {}
+    if metadata_path.exists():
+        return load_json(metadata_path) or {}
+    summary = _load_run_summary(output_dir)
+    article = _find_summary_article(summary, market) or {}
+    return article.get("metadata", {}) or {}
 
 
 def _save_metadata(output_dir: Path, market: str, metadata: Dict) -> None:
     metadata_path = output_dir / f"{market}.json"
-    save_json(metadata, metadata_path)
+    if metadata_path.exists():
+        save_json(metadata, metadata_path)
+
+    summary_path = output_dir / "run_summary.json"
+    summary = load_json(summary_path) or {}
+    article = _find_summary_article(summary, market)
+    if not article:
+        return
+    article["metadata"] = metadata
+    if metadata.get("title"):
+        article["title"] = metadata["title"]
+    if metadata.get("primary_keyword"):
+        article["primary_keyword"] = metadata["primary_keyword"]
+    image_filename = (metadata.get("images") or [{}])[0].get("recommended_filename")
+    if image_filename:
+        article["image_filename"] = image_filename
+    save_json(summary, summary_path)
 
 
 def _count_words(html_content: str) -> int:
@@ -228,18 +305,38 @@ def _apply_image_selection_html(html: str, selection: Dict) -> str:
 
 def _load_articles_for_email(output_dir: Path, markets: List[str]) -> List[Dict]:
     articles: List[Dict] = []
+    summary = _load_run_summary(output_dir)
+    summary_map = {
+        article.get("market"): article
+        for article in summary.get("articles", [])
+        if article.get("market")
+    }
     for market in markets:
-        metadata = _load_metadata(output_dir, market)
-        title = metadata.get("title", "")
-        primary_keyword = metadata.get("primary_keyword", "")
-        image_filename = metadata.get("images", [{}])[0].get("recommended_filename", "")
+        summary_article = summary_map.get(market, {})
+        metadata = summary_article.get("metadata") or _load_metadata(output_dir, market)
+        html_path = output_dir / f"{market}.html"
+        html_content = summary_article.get("html_content") or ""
+        if not html_content and html_path.exists():
+            html_content = html_path.read_text(encoding="utf-8")
+        title = summary_article.get("title") or metadata.get("title", "")
+        primary_keyword = summary_article.get("primary_keyword") or metadata.get("primary_keyword", "")
+        image_filename = (
+            summary_article.get("image_filename")
+            or metadata.get("images", [{}])[0].get("recommended_filename", "")
+        )
+        market_name = (
+            summary_article.get("market_name")
+            or metadata.get("market_name", "")
+        )
         articles.append({
             "market": market,
+            "market_name": market_name,
             "title": title,
             "primary_keyword": primary_keyword,
             "image_filename": image_filename,
             "html_filename": f"{market}.html",
-            "json_filename": f"{market}.json",
+            "html_content": html_content,
+            "metadata": metadata,
         })
     return articles
 
@@ -248,10 +345,12 @@ def _build_attachments(output_dir: Path, markets: List[str]) -> List[Path]:
     attachments: List[Path] = []
     for market in markets:
         attachments.append(output_dir / f"{market}.html")
-        attachments.append(output_dir / f"{market}.json")
-    run_summary = output_dir / "run_summary.json"
-    if run_summary.exists():
-        attachments.append(run_summary)
+        metadata = _load_metadata(output_dir, market)
+        image_filename = metadata.get("images", [{}])[0].get("recommended_filename", "")
+        if image_filename:
+            image_path = output_dir / image_filename
+            if image_path.exists():
+                attachments.append(image_path)
 
     total_size = sum(f.stat().st_size for f in attachments if f.exists())
     if total_size <= MAX_EMAIL_ATTACHMENT_BYTES:
@@ -372,7 +471,11 @@ async def _process_market(run_id: str, market: str, state: Dict) -> None:
             rewritten = _apply_image_selection_html(rewritten, selection)
 
         validator = HTMLValidator()
-        validation = validator.validate(rewritten, market)
+        validation = validator.validate(
+            rewritten,
+            market,
+            week_theme=metadata.get("week_theme")
+        )
         if not validation.get("pass"):
             logger.warning(
                 f"Review rewrite failed HTML validation for {market}: {validation.get('errors')}"

@@ -161,7 +161,6 @@ async def run_weekly() -> Dict:
             logger.info(f"   • Final Title: {article['title']}")
             logger.info(f"   • Final Word Count: {article['metadata']['word_count']}")
             logger.info(f"   • HTML File: {article['html_filename']}")
-            logger.info(f"   • JSON File: {article['json_filename']}")
 
         # Post-process articles to enforce banned-phrase removal, meta length, and keyword density
         final_articles = [

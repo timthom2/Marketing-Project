@@ -17,13 +17,15 @@ class HTMLValidator:
     def __init__(self):
         self.config = load_config("brightspot_guide")
         self.brand_config = load_config("brand")
+        self.rules_config = load_config("rules")
 
-    def validate(self, html_content: str, market: str) -> Dict:
+    def validate(self, html_content: str, market: str, week_theme: Optional[str] = None) -> Dict:
         """Validate HTML content against Brightspot requirements.
 
         Args:
             html_content: HTML content to validate
             market: Market name for CSS prefix check
+            week_theme: Week theme for theme coverage checks
 
         Returns:
             Dict: Validation result with pass/fail status and errors
@@ -46,7 +48,7 @@ class HTMLValidator:
             errors.extend(css_errors)
 
         # Check CTA link
-        if not self._check_cta_link(html_content):
+        if not self._check_cta_link(html_content, week_theme):
             errors.append(f"Missing or incorrect CTA link: {self.config['cta_link']}")
 
         # Check medical disclaimer
@@ -65,6 +67,11 @@ class HTMLValidator:
         # Check hero placeholder + TODO
         if not self._check_hero_placeholder(html_content):
             errors.append("Missing hero image placeholder or TODO comment")
+
+        # Check theme coverage
+        theme_errors = self._check_theme_coverage(html_content, week_theme)
+        if theme_errors:
+            errors.extend(theme_errors)
 
         # Check word count
         word_count_warnings = self._check_word_count(html_content)
@@ -191,9 +198,52 @@ class HTMLValidator:
 
         return errors
 
-    def _check_cta_link(self, html_content: str) -> bool:
+    def _check_cta_link(self, html_content: str, week_theme: Optional[str]) -> bool:
         """Check for required CTA link."""
-        return self.config["cta_link"] in html_content
+        if self.config["cta_link"] in html_content:
+            return True
+
+        if not week_theme:
+            return False
+
+        theme_mapping = self.brand_config.get("theme_service_mapping", {})
+        theme_data = theme_mapping.get(week_theme, {})
+        theme_url = theme_data.get("url", "")
+        if theme_url and theme_url in html_content:
+            return True
+
+        return False
+
+    def _check_theme_coverage(self, html_content: str, week_theme: Optional[str]) -> List[str]:
+        """Check that content meaningfully covers the assigned theme."""
+        errors = []
+        if not week_theme:
+            return errors
+
+        theme_rules = self.rules_config.get("theme_coverage", {})
+        themes = theme_rules.get("themes", {})
+        theme_config = themes.get(week_theme, {})
+        terms = [t.lower() for t in theme_config.get("terms", []) if isinstance(t, str)]
+        if not terms:
+            return errors
+
+        min_count = theme_config.get(
+            "min_term_count",
+            theme_rules.get("default_min_term_count", 2)
+        )
+
+        soup = BeautifulSoup(html_content, 'html.parser')
+        for element in soup(['style', 'script', 'code']):
+            element.decompose()
+        text = soup.get_text(separator=' ').lower()
+
+        term_count = sum(text.count(term) for term in terms)
+        if term_count < min_count:
+            errors.append(
+                f"Theme coverage: expected at least {min_count} mentions of theme terms, found {term_count}"
+            )
+
+        return errors
 
     def _check_disclaimer(self, html_content: str) -> bool:
         """Check for medical disclaimer."""
@@ -206,11 +256,16 @@ class HTMLValidator:
 
         soup = BeautifulSoup(html_content, 'html.parser')
 
+        required_count = self.config["validation_rules"]["faq_count"]
+
         # Look for FAQ section
         faq_sections = soup.find_all(
             lambda tag: tag.name in ['h2', 'h3'] and
             'faq' in tag.get_text().lower()
         )
+
+        if not faq_sections and required_count == 0:
+            return errors
 
         if not faq_sections:
             errors.append("Could not find FAQ section")
@@ -232,7 +287,16 @@ class HTMLValidator:
 
             total_questions += len([q for q in questions if '?' in q.get_text() or 'Q:' in q.get_text()])
 
-        required_count = self.config["validation_rules"]["faq_count"]
+        if required_count == 0:
+            if total_questions == 0:
+                errors.append("FAQ section present but no questions found")
+            elif total_questions > 5:
+                errors.append(
+                    f"FAQ count: {total_questions} questions "
+                    f"(max: 5)"
+                )
+            return errors
+
         if total_questions != required_count:
             errors.append(
                 f"FAQ count: {total_questions} questions "
@@ -311,6 +375,10 @@ class HTMLValidator:
                 }
                 continue
 
-            results[market] = self.validate(html_content, market)
+            results[market] = self.validate(
+                html_content,
+                market,
+                week_theme=article.get("week_theme")
+            )
 
         return results

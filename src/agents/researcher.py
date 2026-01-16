@@ -59,6 +59,118 @@ class ResearcherAgent(BaseAgent):
             logger.warning(f"Failed to load claims file: {e}")
         return {}
 
+    def _normalize_theme_key(self, week_theme: str) -> str:
+        """Normalize week theme to the closest claims/theme key."""
+        theme = (week_theme or "").strip().lower()
+        theme_map = {
+            "dementia_awareness": "dementia",
+            "winter_isolation": "companion_care",
+            "valentines_companionship": "companion_care",
+            "new_year_care_planning": "aging_in_place",
+            "spring_preparation": "falls",
+            "parkinsons_awareness": "parkinsons",
+            "stroke_awareness": "stroke",
+            "palliative_care": "palliative"
+        }
+        return theme_map.get(theme, theme)
+
+    def _render_theme_keywords(self, week_config: Dict, market_config: Dict) -> List[str]:
+        """Render theme keywords with market-specific placeholders."""
+        if not week_config:
+            return []
+
+        theme_keywords = week_config.get("theme_keywords", {}).get("long_tail", [])
+        if not theme_keywords:
+            return []
+
+        replacements = {
+            "{city}": market_config.get("name", ""),
+            "{province}": market_config.get("province", ""),
+            "{health_authority}": market_config.get("health_authority", "")
+        }
+
+        rendered = []
+        for keyword in theme_keywords:
+            if not isinstance(keyword, str):
+                continue
+            value = keyword
+            for token, replacement in replacements.items():
+                if replacement:
+                    value = value.replace(token, replacement)
+            value = " ".join(value.split()).strip()
+            if "{" in value or not value:
+                continue
+            rendered.append(value)
+
+        return rendered
+
+    def _get_theme_focus_topics(self, week_theme: str, market_name: str) -> List[str]:
+        """Provide topic checklist per theme to keep content on-theme."""
+        topics = {
+            "new_year_care_planning": [
+                "annual care plan review checklist (medications, safety, support)",
+                "how to schedule a home care assessment",
+                "set 1-2 measurable goals for the year"
+            ],
+            "winter_safety": [
+                "fall prevention in winter (ice, stairs, lighting)",
+                "hypothermia warning signs and prevention",
+                "heating safety and emergency planning"
+            ],
+            "winter_isolation": [
+                "signs of social isolation in seniors",
+                "local community or volunteer programs",
+                "companionship care benefits"
+            ],
+            "dementia_awareness": [
+                "early signs and the diagnosis pathway",
+                "types of dementia and how they differ",
+                "caregiver support and respite options"
+            ],
+            "heart_health": [
+                "post-cardiac event recovery at home",
+                "medication adherence and warning signs",
+                "cardiac rehab or heart-healthy routines"
+            ],
+            "valentines_companionship": [
+                "emotional wellbeing and social connection",
+                "local senior programs or events",
+                "companionship care benefits"
+            ],
+            "tax_season_prep": [
+                "eligible home care expenses and credits",
+                "what documents to keep for filing",
+                "how to estimate care costs for the year"
+            ],
+            "hospital_to_home": [
+                "discharge checklist and medication reconciliation",
+                "30-day recovery plan and follow-up visits",
+                "how to reduce readmission risk"
+            ],
+            "spring_preparation": [
+                "spring home safety hazards (thaw, wet floors)",
+                "mobility and outdoor readiness",
+                "home modification or maintenance checklist"
+            ],
+            "parkinsons_awareness": [
+                "motor and non-motor symptoms",
+                "daily living support strategies",
+                "caregiver tips for routines and safety"
+            ],
+            "stroke_awareness": [
+                "F.A.S.T. warning signs and emergency response",
+                "rehab timeline and therapy needs",
+                "home adaptations for safety"
+            ],
+            "palliative_care": [
+                "difference between palliative and hospice care",
+                "symptom management and comfort focus",
+                "advance care planning and family support"
+            ]
+        }
+
+        return topics.get(week_theme, [f"local guidance for {market_name} families"])
+
     def _get_vetted_stats(self, province: str, theme: str) -> List[Dict]:
         """Get vetted statistics for province and theme.
         
@@ -82,8 +194,11 @@ class ResearcherAgent(BaseAgent):
                     if isinstance(stat, dict) and stat.get("source_url"):
                         stats.append(stat)
         
-        # Get theme-specific stats
-        theme_stats = self.claims.get("themes", {}).get(theme, [])
+        # Get theme-specific stats (normalized to claims theme keys)
+        theme_key = self._normalize_theme_key(theme)
+        theme_stats = self.claims.get("themes", {}).get(theme_key, [])
+        if not theme_stats:
+            theme_stats = self.claims.get("national", {}).get(theme_key, [])
         for stat in theme_stats[:2]:
             if isinstance(stat, dict) and stat.get("source_url"):
                 stats.append(stat)
@@ -184,6 +299,10 @@ class ResearcherAgent(BaseAgent):
             )
         
         # Phase 3: Check theme variation if market is provided
+        ignore_variation = os.getenv("IGNORE_THEME_VARIATION", "").strip().lower() in ("1", "true", "yes", "on")
+        if ignore_variation:
+            return base_theme
+
         if market_key and base_theme.get("theme"):
             week_theme = base_theme.get("theme")
             
@@ -406,7 +525,11 @@ Return ONLY valid JSON."""
         compressed_briefs: List[Dict]
     ) -> Dict:
         """Synthesize compressed briefs into an evidence-driven research pack."""
-        
+        seasonal_context = week_config.get("seasonal_context", "")
+        target_dates = week_config.get("target_dates", "")
+        week_requirements = week_config.get("must_include", [])
+        system_context_mode = self._system_context_mode(week_theme)
+
         # Build base research structure
         research_pack = {
             "market": market_key,
@@ -414,6 +537,11 @@ Return ONLY valid JSON."""
             "province": market_config["province"],
             "location_url": market_config["location_url"],
             "week_theme": week_theme,
+            "week_theme_description": week_config.get("description", ""),
+            "seasonal_context": seasonal_context,
+            "target_dates": target_dates,
+            "week_requirements": week_requirements,
+            "system_context_mode": system_context_mode,
             "generated_at": datetime.now().isoformat(),
         }
 
@@ -430,10 +558,19 @@ Return ONLY valid JSON."""
             ))
 
         # Always add core components
-        research_pack["keywords"] = self._generate_keywords(market_config, week_theme, market_key=market_key)
+        research_pack["keywords"] = self._generate_keywords(
+            market_config,
+            week_theme,
+            week_config,
+            market_key=market_key
+        )
         research_pack["faqs"] = self._generate_faqs(market_config, week_theme)
         research_pack["local_resources"] = self._generate_local_resources(market_config, week_theme)
         research_pack["medical_sources"] = self._generate_medical_sources(market_config, week_theme)
+        research_pack["theme_focus_topics"] = self._get_theme_focus_topics(
+            week_theme,
+            market_config.get("name", "")
+        )
 
         # Add anti-generic constraints
         research_pack["anti_generic"] = self.research_sources_config.get("anti_generic", {})
@@ -445,7 +582,8 @@ Return ONLY valid JSON."""
         )
         
         # Add H2 seeds from market config (prefer h2_seeds, fallback to h2_prompts)
-        research_pack["h2_seeds"] = market_config.get("h2_seeds", market_config.get("h2_prompts", []))
+        h2_seeds = market_config.get("h2_seeds", market_config.get("h2_prompts", []))
+        research_pack["h2_seeds"] = self._filter_h2_seeds(h2_seeds, system_context_mode)
         
         # Add must-include entities from market config
         research_pack["must_include_entities"] = market_config.get("must_include_entities", [])
@@ -457,6 +595,41 @@ Return ONLY valid JSON."""
         research_pack["local_authority_links"] = market_config.get("local_resources", [])[:2]
 
         return research_pack
+
+    def _system_context_mode(self, week_theme: str) -> str:
+        system_focus = {
+            "new_year_care_planning",
+            "tax_season_prep",
+            "hospital_to_home",
+        }
+        return "full" if week_theme in system_focus else "brief"
+
+    def _filter_h2_seeds(self, h2_seeds: List[str], system_context_mode: str) -> List[str]:
+        if system_context_mode == "full" or not h2_seeds:
+            return h2_seeds
+        return [seed for seed in h2_seeds if not self._is_system_h2(seed)]
+
+    def _is_system_h2(self, seed: str) -> bool:
+        if not seed:
+            return False
+        lowered = seed.lower()
+        system_keywords = (
+            "clsc",
+            "ramq",
+            "ohip",
+            "hccss",
+            "msp",
+            "csil",
+            "ahcip",
+            "home and community care",
+            "home support",
+            "continuing care",
+            "health authority",
+            "coverage",
+            "tax credit",
+            "soutien",
+        )
+        return any(keyword in lowered for keyword in system_keywords)
 
     async def _llm_synthesize(
         self,
@@ -483,6 +656,9 @@ Return ONLY valid JSON."""
 
 THEME: {week_theme.replace('_', ' ').title()}
 THEME CONTEXT: {week_config.get('description', '')}
+SEASONAL CONTEXT: {week_config.get('seasonal_context', '')}
+TARGET DATES: {week_config.get('target_dates', '')}
+CALENDAR MUST-INCLUDE: {", ".join(week_config.get("must_include", [])) if week_config.get("must_include") else "None specified"}
 
 EXTRACTED RESEARCH:
 {briefs_text}
@@ -580,6 +756,8 @@ Return ONLY valid JSON."""
         week_config: Dict
     ) -> Dict:
         """Generate research components when web discovery fails."""
+        seasonal_context = week_config.get("seasonal_context", "this time of year")
+        theme_readable = week_theme.replace("_", " ")
         
         story_leads = [
             {
@@ -602,9 +780,9 @@ Return ONLY valid JSON."""
 
         news_pegs = [
             {
-                "hook": f"With {market_config['province']}'s latest home care funding announcement, families have new options to explore.",
+                "hook": f"{seasonal_context} makes {theme_readable} especially relevant for {market_config['name']} families.",
                 "source_url": "",
-                "relevance": f"Local funding affects {market_config['name']} families directly"
+                "relevance": f"Timing and local conditions affect care decisions in {market_config['name']}"
             }
         ]
 
@@ -624,12 +802,12 @@ Return ONLY valid JSON."""
         actionable_takeaways = [
             {
                 "action": "Schedule a family meeting to discuss care preferences before a crisis occurs",
-                "why_now": "New Year is ideal time for planning conversations",
+                "why_now": seasonal_context,
                 "local_resource": f"{market_config['name']} CLSC or local health authority"
             },
             {
                 "action": "Request a home safety assessment from your local health authority",
-                "why_now": "Winter hazards make this especially timely",
+                "why_now": seasonal_context,
                 "local_resource": f"{market_config['province']} home care services"
             }
         ]
@@ -716,13 +894,54 @@ Return ONLY valid JSON."""
         
         base_sources = [base_source]
 
+        theme_key = self._normalize_theme_key(week_theme)
         theme_sources = {
+            "new_year_care_planning": [
+                {
+                    "title": "Health Canada - Caring for Seniors",
+                    "url": "https://www.canada.ca/en/public-health/services/health-promotion/aging-seniors/publications/caring-for-seniors.html",
+                    "publisher": "Public Health Agency of Canada",
+                    "summary": "Resources for families planning care for aging loved ones."
+                }
+            ],
             "winter_safety": [
                 {
                     "title": "Health Canada - Cold Weather Safety",
                     "url": "https://www.canada.ca/en/health-canada/services/healthy-living/your-health/environment/extreme-cold.html",
                     "publisher": "Health Canada",
                     "summary": "Guidelines for preventing cold-related health issues in seniors."
+                }
+            ],
+            "winter_isolation": [
+                {
+                    "title": "Public Health Agency of Canada - Aging and Seniors",
+                    "url": "https://www.canada.ca/en/public-health/services/health-promotion/aging-seniors.html",
+                    "publisher": "Public Health Agency of Canada",
+                    "summary": "Resources on healthy aging, mental health, and social connection."
+                }
+            ],
+            "dementia": [
+                {
+                    "title": "Alzheimer Society of Canada - About Dementia",
+                    "url": "https://alzheimer.ca/en/about-dementia/what-dementia",
+                    "publisher": "Alzheimer Society of Canada",
+                    "summary": "Overview of dementia types, symptoms, and support resources."
+                }
+            ],
+            "heart_health": [
+                {
+                    "title": "Heart and Stroke Foundation - Heart Disease",
+                    "url": "https://www.heartandstroke.ca/heart-disease",
+                    "publisher": "Heart and Stroke Foundation of Canada",
+                    "summary": "Information on heart conditions, risk factors, and prevention."
+                }
+            ],
+            "companion_care": [
+                {
+                    "title": "Public Health Agency of Canada - Aging and Seniors",
+                    "url": "https://www.canada.ca/en/public-health/services/health-promotion/aging-seniors.html",
+                    "publisher": "Public Health Agency of Canada",
+                    "summary": "Resources on healthy aging, social connection, and wellbeing."
                 }
             ],
             "tax_season_prep": [
@@ -733,17 +952,49 @@ Return ONLY valid JSON."""
                     "summary": "Official guide to claiming medical expense tax credits including home care."
                 }
             ],
-            "new_year_care_planning": [
+            "hospital_to_home": [
                 {
-                    "title": "Health Canada - Caring for Seniors",
-                    "url": "https://www.canada.ca/en/public-health/services/health-promotion/aging-seniors/publications/caring-for-seniors.html",
+                    "title": "CIHI - Home Care",
+                    "url": "https://www.cihi.ca/en/home-care",
+                    "publisher": "Canadian Institute for Health Information",
+                    "summary": "Home care context and system performance across Canada."
+                }
+            ],
+            "spring_preparation": [
+                {
+                    "title": "Public Health Agency of Canada - Seniors Falls",
+                    "url": "https://www.canada.ca/en/public-health/services/health-promotion/aging-seniors/publications/publications-general-public/seniors-falls-canada-second-report.html",
                     "publisher": "Public Health Agency of Canada",
-                    "summary": "Resources for families planning care for aging loved ones."
+                    "summary": "Falls prevention guidance and risk factors for seniors."
+                }
+            ],
+            "parkinsons": [
+                {
+                    "title": "Parkinson Canada - What is Parkinson's",
+                    "url": "https://www.parkinson.ca/what-is-parkinsons/",
+                    "publisher": "Parkinson Canada",
+                    "summary": "Overview of Parkinson's symptoms, progression, and resources."
+                }
+            ],
+            "stroke": [
+                {
+                    "title": "Heart and Stroke Foundation - What is Stroke",
+                    "url": "https://www.heartandstroke.ca/stroke/what-is-stroke",
+                    "publisher": "Heart and Stroke Foundation of Canada",
+                    "summary": "Stroke warning signs, causes, and recovery information."
+                }
+            ],
+            "palliative": [
+                {
+                    "title": "Canadian Hospice Palliative Care Association",
+                    "url": "https://www.chpca.ca/",
+                    "publisher": "CHPCA",
+                    "summary": "Information on palliative care, hospice services, and family support."
                 }
             ]
         }
 
-        additional_sources = theme_sources.get(week_theme, [])
+        additional_sources = theme_sources.get(theme_key, []) or theme_sources.get(week_theme, [])
         selected_additional = random.sample(additional_sources, min(len(additional_sources), random.randint(0, 2)))
         all_sources = base_sources + selected_additional
 
@@ -866,12 +1117,19 @@ Return ONLY valid JSON."""
         
         return selected
 
-    def _generate_keywords(self, market_config: Dict, week_theme: str, market_key: Optional[str] = None) -> Dict:
+    def _generate_keywords(
+        self,
+        market_config: Dict,
+        week_theme: str,
+        week_config: Optional[Dict] = None,
+        market_key: Optional[str] = None
+    ) -> Dict:
         """Generate contextual keywords based on theme, avoiding recently used keywords.
         
         Args:
             market_config: Market configuration dict
             week_theme: Week theme string
+            week_config: Week configuration (for theme keywords)
             market_key: Optional market key for checking keyword history
             
         Returns:
@@ -901,17 +1159,41 @@ Return ONLY valid JSON."""
             )
             filtered_primary_pool = primary_pool
         
-        primary = random.choice(filtered_primary_pool)
-
-        theme_keywords = {
-            "new_year_care_planning": ["senior care planning", "aging at home", "care plan review", "senior wellness"],
-            "winter_safety": ["winter senior safety", "cold weather care", "home heating safety", "falls prevention"],
-            "winter_isolation": ["senior companionship", "elderly social connection", "loneliness prevention", "senior social activities"],
-            "valentines_companionship": ["senior companionship", "elderly social connection", "loneliness prevention", "senior social activities"],
-            "tax_season_prep": ["home care tax credits", "medical expense deduction", "senior tax planning", "care cost savings"]
+        theme_specific = self._render_theme_keywords(week_config or {}, market_config)
+        primary = None
+        theme_term_map = {
+            "new_year_care_planning": ["plan", "planning", "assessment", "aging in place", "care review"],
+            "winter_safety": ["winter", "fall", "hypothermia", "heating", "ice", "snow"],
+            "winter_isolation": ["loneliness", "isolation", "companion", "social"],
+            "dementia_awareness": ["dementia", "alzheimer", "memory"],
+            "heart_health": ["heart", "cardiac"],
+            "valentines_companionship": ["companion", "loneliness", "social"],
+            "tax_season_prep": ["tax", "credit", "deduction"],
+            "hospital_to_home": ["hospital", "discharge", "readmission", "transition"],
+            "spring_preparation": ["spring", "thaw", "fall", "safety"],
+            "parkinsons_awareness": ["parkinson"],
+            "stroke_awareness": ["stroke"],
+            "palliative_care": ["palliative", "hospice", "end of life"]
         }
+        theme_terms = [t for t in theme_term_map.get(week_theme, []) if t]
 
-        theme_specific = theme_keywords.get(week_theme, [])
+        # Prefer primary keywords aligned to theme terms
+        themed_primary_pool = [
+            kw for kw in filtered_primary_pool
+            if any(term in kw.lower() for term in theme_terms)
+        ]
+        if themed_primary_pool:
+            primary = random.choice(themed_primary_pool)
+        elif theme_specific:
+            localized_theme_terms = [
+                kw for kw in theme_specific
+                if market_config.get("name", "").lower() in kw.lower()
+                or market_config.get("province", "").lower() in kw.lower()
+            ]
+            if localized_theme_terms:
+                primary = random.choice(localized_theme_terms)
+        if not primary:
+            primary = random.choice(filtered_primary_pool)
         available_secondary = secondary_pool + theme_specific
         
         # Filter secondary keywords to avoid recent ones (using cached recent_keywords)
@@ -958,24 +1240,122 @@ Return ONLY valid JSON."""
         theme_faqs = {
             "new_year_care_planning": [
                 {
-                    "question": "When should families start planning for home care?",
-                    "answer": "Ideally before a crisis occurs. The new year is an excellent time to have family discussions about care preferences and explore local options."
+                    "question": "What should a yearly care plan review include?",
+                    "answer": "Focus on medications, safety risks, support needs, and backup plans. A simple checklist helps families spot changes early."
                 },
                 {
-                    "question": "What should a senior care plan include?",
-                    "answer": "A comprehensive plan covers daily living assistance, medical needs, emergency contacts, financial considerations, and your loved one's personal preferences."
+                    "question": f"How do we start a home care assessment in {market_config['province']}?",
+                    "answer": "Begin with your local health authority for a public assessment, then compare private options for consistent support."
                 }
             ],
             "winter_safety": [
                 {
                     "question": "How can we prevent falls for seniors in winter?",
-                    "answer": "Ensure proper footwear, keep walkways clear, install grab bars, and consider companion care for outdoor activities during icy conditions."
+                    "answer": "Improve lighting, use proper footwear, clear ice quickly, and add grab bars or handrails where needed."
+                },
+                {
+                    "question": "What are the warning signs of hypothermia in seniors?",
+                    "answer": "Look for shivering, confusion, slow speech, and fatigue. Keep homes warm and limit time outdoors in extreme cold."
+                }
+            ],
+            "winter_isolation": [
+                {
+                    "question": "What are common signs of winter isolation in older adults?",
+                    "answer": "Reduced phone calls, missed appointments, and low mood can signal isolation. Regular check-ins help."
+                },
+                {
+                    "question": "How can companion care help in winter?",
+                    "answer": "Companion care supports routines, social connection, and safe outings when family cannot be present."
+                }
+            ],
+            "dementia_awareness": [
+                {
+                    "question": "What are early signs of dementia?",
+                    "answer": "Common signs include memory changes, confusion with time or place, and difficulty with familiar tasks."
+                },
+                {
+                    "question": "How is dementia diagnosed in Canada?",
+                    "answer": "Diagnosis typically involves a family doctor, cognitive screening, and referral to specialists when needed."
+                }
+            ],
+            "heart_health": [
+                {
+                    "question": "What does safe cardiac recovery at home look like?",
+                    "answer": "Follow discharge instructions, manage medications, track symptoms, and attend cardiac rehab if available."
+                },
+                {
+                    "question": "What warning signs should families watch after a cardiac event?",
+                    "answer": "New chest pain, shortness of breath, dizziness, or swelling should be discussed with a clinician promptly."
+                }
+            ],
+            "valentines_companionship": [
+                {
+                    "question": "Why is social connection important for seniors?",
+                    "answer": "Regular connection supports mental health, cognitive health, and daily motivation during long winters."
+                },
+                {
+                    "question": "What are simple ways to reduce loneliness?",
+                    "answer": "Schedule weekly calls, community programs, or companion care visits to keep routines consistent."
                 }
             ],
             "tax_season_prep": [
                 {
                     "question": "Can I claim home care expenses on my taxes?",
-                    "answer": "Yes, many home care expenses qualify for the Medical Expense Tax Credit. Keep receipts and consult CRA guidelines or a tax professional."
+                    "answer": "Many home care expenses qualify for the Medical Expense Tax Credit. Keep receipts and check CRA rules."
+                },
+                {
+                    "question": "What documents should caregivers keep for tax season?",
+                    "answer": "Keep invoices, receipts, and care schedules to support eligible credits or deductions."
+                }
+            ],
+            "hospital_to_home": [
+                {
+                    "question": "What should we do in the first 48 hours after discharge?",
+                    "answer": "Review medications, confirm follow-up appointments, and arrange help with mobility and daily tasks."
+                },
+                {
+                    "question": "How can families reduce readmission risk?",
+                    "answer": "Track symptoms, follow care instructions, and coordinate support for meals, mobility, and hygiene."
+                }
+            ],
+            "spring_preparation": [
+                {
+                    "question": "What spring hazards increase fall risk for seniors?",
+                    "answer": "Wet floors, uneven pavement, and clutter from spring cleaning can increase falls during thaw season."
+                },
+                {
+                    "question": "How can we prepare the home for spring?",
+                    "answer": "Check lighting, remove trip hazards, and consider small home modifications for safer movement."
+                }
+            ],
+            "parkinsons_awareness": [
+                {
+                    "question": "What are early signs of Parkinson's?",
+                    "answer": "Early signs include tremor, stiffness, and slowed movement. Non-motor changes can appear too."
+                },
+                {
+                    "question": "How can home care support daily living with Parkinson's?",
+                    "answer": "Support can include mobility help, medication reminders, and routines that reduce fatigue."
+                }
+            ],
+            "stroke_awareness": [
+                {
+                    "question": "What are the FAST warning signs of stroke?",
+                    "answer": "Face drooping, Arm weakness, Speech trouble, Time to call emergency services."
+                },
+                {
+                    "question": "What does stroke recovery at home involve?",
+                    "answer": "Rehab exercises, speech or mobility therapy, and home adaptations are common parts of recovery."
+                }
+            ],
+            "palliative_care": [
+                {
+                    "question": "What is the difference between palliative and hospice care?",
+                    "answer": "Palliative care can begin earlier in illness, while hospice focuses on end-of-life comfort."
+                },
+                {
+                    "question": "When should families ask about palliative care?",
+                    "answer": "Early conversations help align care with comfort goals and reduce stress during health changes."
                 }
             ]
         }

@@ -428,6 +428,40 @@ def _load_run_summary(run_id: str) -> dict:
     summary_path = _run_output_dir(run_id) / "run_summary.json"
     return load_json(summary_path) or {}
 
+def _update_run_summary_metadata(run_id: str, market: str, metadata: dict) -> None:
+    summary_path = _run_output_dir(run_id) / "run_summary.json"
+    summary = load_json(summary_path) or {}
+    articles = summary.get("articles", [])
+    updated = False
+    for article in articles:
+        if article.get("market") == market:
+            article["metadata"] = metadata
+            if metadata.get("title"):
+                article["title"] = metadata["title"]
+            if metadata.get("primary_keyword"):
+                article["primary_keyword"] = metadata["primary_keyword"]
+            image_filename = (metadata.get("images") or [{}])[0].get("recommended_filename")
+            if image_filename:
+                article["image_filename"] = image_filename
+            updated = True
+            break
+    if updated:
+        save_json(summary, summary_path)
+
+
+def _update_run_summary_html(run_id: str, market: str, html_content: str) -> None:
+    summary_path = _run_output_dir(run_id) / "run_summary.json"
+    summary = load_json(summary_path) or {}
+    articles = summary.get("articles", [])
+    updated = False
+    for article in articles:
+        if article.get("market") == market:
+            article["html_content"] = html_content
+            updated = True
+            break
+    if updated:
+        save_json(summary, summary_path)
+
 def _backfill_review_send_status(state: dict, summary: dict) -> bool:
     if not state or not summary:
         return False
@@ -500,16 +534,67 @@ def _review_dir(run_id: str) -> Path:
     return _run_output_dir(run_id) / "review"
 
 
-def _load_article_html(run_id: str, market: str) -> str:
+def _load_full_article_html(run_id: str, market: str) -> str:
+    summary = _load_run_summary(run_id)
+    for article in summary.get("articles", []):
+        if article.get("market") == market:
+            html_content = article.get("html_content") or ""
+            if html_content:
+                return html_content
+            break
     html_path = _run_output_dir(run_id) / f"{market}.html"
     if not html_path.exists():
         raise FileNotFoundError(str(html_path))
     return html_path.read_text(encoding="utf-8")
 
 
+def _load_article_html(run_id: str, market: str) -> str:
+    return _load_full_article_html(run_id, market)
+
+
+def _strip_to_body_html(html_content: str) -> str:
+    """Return HTML that begins after the subheadline (deck) section."""
+    if not html_content:
+        return ""
+
+    try:
+        soup = BeautifulSoup(html_content, "html.parser")
+    except Exception:
+        return html_content
+
+    wrapper = soup.find("div", class_="blog-content-module")
+    target = wrapper or soup
+
+    h1_tag = target.find("h1")
+    if not h1_tag:
+        return str(wrapper) if wrapper else html_content
+
+    deck_tag = h1_tag.find_next("p")
+
+    for child in list(target.children):
+        if child == h1_tag:
+            break
+        child.extract()
+
+    h1_tag.extract()
+
+    if deck_tag:
+        deck_tag.extract()
+
+    return str(wrapper) if wrapper else str(soup)
+
+
 def _load_article_metadata(run_id: str, market: str) -> dict:
     json_path = _run_output_dir(run_id) / f"{market}.json"
-    return load_json(json_path) or {}
+    if json_path.exists():
+        metadata = load_json(json_path) or {}
+        if metadata:
+            return metadata
+    summary = _load_run_summary(run_id)
+    for article in summary.get("articles", []):
+        if article.get("market") == market:
+            return article.get("metadata") or {}
+    return {}
 
 
 def _load_feedback(feedback_path: Optional[str]) -> dict:
@@ -935,13 +1020,22 @@ def _apply_image_selection(run_id: str, market: str, selection: dict) -> None:
 
     diff_path = None
     html_content = None
-    if html_path.exists():
-        html_content = html_path.read_text(encoding="utf-8")
-        html_content = _update_hero_image(html_content, image_url, image_alt, credit_html)
-        html_path.write_text(html_content, encoding="utf-8")
-        diff_path = _refresh_diff(run_id, market, html_content)
+    try:
+        html_content = _load_full_article_html(run_id, market)
+    except FileNotFoundError:
+        html_content = None
 
-    metadata = load_json(json_path) or {}
+    if html_content:
+        html_content = _update_hero_image(html_content, image_url, image_alt, credit_html)
+        body_html = _strip_to_body_html(html_content)
+        html_path.write_text(body_html, encoding="utf-8")
+        diff_path = _refresh_diff(run_id, market, html_content)
+        _update_run_summary_html(run_id, market, html_content)
+
+    if json_path.exists():
+        metadata = load_json(json_path) or {}
+    else:
+        metadata = _load_article_metadata(run_id, market)
     images = metadata.get("images") or []
     image_entry = {
         "id": selection.get("id"),
@@ -960,7 +1054,9 @@ def _apply_image_selection(run_id: str, market: str, selection: dict) -> None:
     metadata["last_review_update"] = datetime.now().isoformat()
     if diff_path:
         metadata["diff_path"] = diff_path
-    save_json(metadata, json_path)
+    if json_path.exists():
+        save_json(metadata, json_path)
+    _update_run_summary_metadata(run_id, market, metadata)
 
 
 @app.get("/health")
@@ -1676,8 +1772,9 @@ async def download_article(token: str) -> FileResponse:
         raise HTTPException(status_code=404, detail="Review token not found")
 
     run_id, market, _state = match
-    html_path = _run_output_dir(run_id) / f"{market}.html"
-    if not html_path.exists():
-        raise HTTPException(status_code=404, detail="HTML file not found")
-
-    return FileResponse(path=str(html_path), filename=f"{market}.html")
+    html_content = _load_full_article_html(run_id, market)
+    download_dir = _review_dir(run_id)
+    download_dir.mkdir(parents=True, exist_ok=True)
+    download_path = download_dir / f"{market}_review.html"
+    download_path.write_text(html_content, encoding="utf-8")
+    return FileResponse(path=str(download_path), filename=f"{market}.html")

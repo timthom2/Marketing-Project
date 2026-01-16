@@ -294,6 +294,47 @@ quality_report:
   fail_run_if_below: true
   alert_on_failure: true
 
+# Theme coverage checks for all calendar topics
+theme_coverage:
+  default_min_term_count: 2
+  themes:
+    new_year_care_planning:
+      terms: ["care plan", "planning", "assessment", "aging in place"]
+      min_term_count: 2
+    winter_safety:
+      terms: ["winter", "fall", "falls", "hypothermia", "ice", "heating"]
+      min_term_count: 3
+    winter_isolation:
+      terms: ["isolation", "loneliness", "companion", "social connection"]
+      min_term_count: 2
+    dementia_awareness:
+      terms: ["dementia", "alzheimer", "memory"]
+      min_term_count: 3
+    heart_health:
+      terms: ["heart", "cardiac", "cardiovascular"]
+      min_term_count: 2
+    valentines_companionship:
+      terms: ["companion", "loneliness", "connection", "social"]
+      min_term_count: 2
+    tax_season_prep:
+      terms: ["tax", "credit", "deduction", "expense"]
+      min_term_count: 2
+    hospital_to_home:
+      terms: ["hospital", "discharge", "readmission", "transition"]
+      min_term_count: 2
+    spring_preparation:
+      terms: ["spring", "thaw", "fall", "safety"]
+      min_term_count: 2
+    parkinsons_awareness:
+      terms: ["parkinson", "tremor", "movement"]
+      min_term_count: 2
+    stroke_awareness:
+      terms: ["stroke", "fast", "rehab"]
+      min_term_count: 2
+    palliative_care:
+      terms: ["palliative", "hospice", "end of life", "comfort"]
+      min_term_count: 2
+
 # Linter Configuration
 linter:
   # Run on every article
