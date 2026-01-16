@@ -173,7 +173,8 @@ class EditorQAAgent(BaseAgent):
             market = draft.get("market", "")
             editor_report["compliance_checks"][market] = self.html_validator.validate(
                 draft.get("html_content", ""),
-                market
+                market,
+                week_theme=draft.get("week_theme")
             )
 
         # PHASE 2.5: Anti-Duplication Validation
@@ -546,8 +547,9 @@ Return ONLY valid JSON:
                 assessment["needs_improvement"] = True
 
             # Basic checks for FAQ count and inline authority links
+            requires_faq = self._requires_faq(draft)
             faq_count = html_content.lower().count("frequently asked questions")
-            if faq_count == 0:
+            if faq_count == 0 and requires_faq:
                 assessment.setdefault("key_issues", []).append("FAQ section missing")
                 assessment["overall_score"] = min(assessment.get("overall_score", 5), 6)
                 assessment["needs_improvement"] = True
@@ -1068,11 +1070,18 @@ Return the COMPLETE rewritten HTML article. The article must:
             if not stats_result["passed"]:
                 report["issues"].append(f"{market_name}: Only {stats_result['count']} inline cited stats (need 2+)")
             
-            # 3. FAQ Uniqueness Check (>=4 of 5 unique)
-            faq_result = self._check_faq_uniqueness(market, all_faqs)
+            # 3. FAQ Uniqueness Check (>=4 of 5 unique for standard articles)
+            faq_required = self._requires_faq(draft)
+            faq_result = self._check_faq_uniqueness(market, all_faqs, faq_required=faq_required)
             market_report["faq_uniqueness"] = faq_result
             if not faq_result["passed"]:
-                report["issues"].append(f"{market_name}: Only {faq_result['unique_count']}/5 unique FAQs (need 4+)")
+                if faq_result.get("reason"):
+                    report["issues"].append(f"{market_name}: {faq_result['reason']}")
+                else:
+                    report["issues"].append(
+                        f"{market_name}: Only {faq_result['unique_count']}/{faq_result.get('total_count', 0)} "
+                        f"unique FAQs (need {faq_result.get('required_unique', 0)}+)"
+                    )
             
             # 4. Banned Phrases Check (entire body)
             banned_result = self._check_banned_phrases(html)
@@ -1151,8 +1160,20 @@ Return the COMPLETE rewritten HTML article. The article must:
             "count": min(cited_stats_count, 5)  # Cap at 5 for display
         }
 
-    def _check_faq_uniqueness(self, market: str, all_faqs: Dict[str, List[str]]) -> Dict:
-        """Check if at least 4 of 5 FAQs are unique vs other markets."""
+    def _requires_faq(self, draft: Dict) -> bool:
+        """Determine whether FAQs are required based on structure type."""
+        structure_type = draft.get("metadata", {}).get("structure_type") or "standard"
+        return structure_type == "standard"
+
+    def _check_faq_uniqueness(
+        self,
+        market: str,
+        all_faqs: Dict[str, List[str]],
+        faq_required: bool = True,
+        min_questions: int = 5,
+        min_unique: int = 4
+    ) -> Dict:
+        """Check FAQ uniqueness vs other markets."""
         my_faqs = all_faqs.get(market, [])
         other_faqs = set()
         
@@ -1160,19 +1181,39 @@ Return the COMPLETE rewritten HTML article. The article must:
             if other_market != market:
                 other_faqs.update(faqs)
         
-        if len(my_faqs) < 5:
+        if not my_faqs:
+            if not faq_required:
+                return {
+                    "passed": True,
+                    "unique_count": 0,
+                    "total_count": 0,
+                    "skipped": True
+                }
+            return {
+                "passed": False,
+                "unique_count": 0,
+                "total_count": 0,
+                "reason": "No FAQs found"
+            }
+
+        if faq_required and len(my_faqs) < min_questions:
             return {
                 "passed": False,
                 "unique_count": len(my_faqs),
-                "reason": f"Only {len(my_faqs)} FAQs (need 5)"
+                "total_count": len(my_faqs),
+                "required_unique": min_unique,
+                "reason": f"Only {len(my_faqs)} FAQs (need {min_questions})"
             }
         
         unique_faqs = [faq for faq in my_faqs if faq not in other_faqs]
         
+        required_unique = min_unique if faq_required else min(min_unique, len(my_faqs))
+
         return {
-            "passed": len(unique_faqs) >= 4,
+            "passed": len(unique_faqs) >= required_unique,
             "unique_count": len(unique_faqs),
-            "total_count": len(my_faqs)
+            "total_count": len(my_faqs),
+            "required_unique": required_unique
         }
 
     def _check_banned_phrases(self, html: str) -> Dict:
